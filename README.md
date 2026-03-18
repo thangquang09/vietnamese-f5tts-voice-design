@@ -40,15 +40,8 @@ You describe the voice you want (e.g., *"Giọng nữ trẻ, nói chậm rãi, g
 ```bash
 git clone https://github.com/thangquang09/vietnamese-f5tts-voice-design.git
 cd vietnamese-f5tts-voice-design
-pip install -e .
-```
-
-### Dependencies
-
-```bash
 pip install -r requirements.txt
 ```
-
 
 ### Inference (CLI)
 
