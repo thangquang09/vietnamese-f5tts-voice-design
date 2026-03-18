@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Training artifacts (large files, don't commit)
+train_logs/
+inference_output/
+*.pt
+*.pth
+*.bin
+*.npz
+*.safetensors
+
+# Processed data (too large for git)
+/data/
+*.wav
+*.mp3
+*.flac
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+nohup.out
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment
+.env
+AGENTS.md

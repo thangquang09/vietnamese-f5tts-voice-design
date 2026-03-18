@@ -39,6 +39,7 @@ def parse_args():
     parser.add_argument('--eval-every-step', type=int, default=1000)
     # save all states including optimizer every save-every-step
     parser.add_argument('--save-every-step', type=int, default=1000)
+    parser.add_argument('--max-ckpts', type=int, default=3, help='Max checkpoints to keep (oldest deleted)')
     parser.add_argument('--resume-from', type=str, default=None, help='Path to checkpoint to resume training')
 
     # Log and random seed
@@ -112,7 +113,30 @@ if __name__ == '__main__':
                             
     # load dit
     model = CrossDiT(**params['model'])
-    model.load_state_dict(torch.load(args.pretrained_ckpt)["model"])
+    
+    # Load pretrained checkpoint, handling shape mismatches (e.g. text_embed: 201 vs 177)
+    # PyTorch strict=False still errors on shape mismatch, so we manually filter
+    pretrained_state = torch.load(args.pretrained_ckpt, map_location='cpu')["model"]
+    model_state = model.state_dict()
+    
+    # Filter out keys with shape mismatch
+    filtered_state = {}
+    skipped_keys = []
+    for key, value in pretrained_state.items():
+        if key in model_state and value.shape == model_state[key].shape:
+            filtered_state[key] = value
+        else:
+            skipped_keys.append(f"{key}: ckpt={value.shape} vs model={model_state.get(key, 'MISSING')}")
+    
+    missing, unexpected = model.load_state_dict(filtered_state, strict=False)
+    if accelerator.is_main_process:
+        print(f"Loaded {len(filtered_state)}/{len(pretrained_state)} pretrained weights")
+        if skipped_keys:
+            print(f"Skipped {len(skipped_keys)} keys (shape mismatch, will be randomly initialized):")
+            for s in skipped_keys:
+                print(f"  → {s}")
+        if missing:
+            print(f"Missing keys (random init): {len(missing)}")
 
     # mel spectrogram - move to accelerator device after preparation
     mel = MelSpec(**params['mel'])
@@ -266,16 +290,21 @@ if __name__ == '__main__':
                                    epoch=global_step, save_path=args.log_dir + 'output/', val_num=1)
                         
                         # Save model checkpoint
+                        ckpt_path = args.save_dir + str(global_step) + '.pt'
                         accelerator.save({
                             "model": unwrapped_model.state_dict(),
                             "optimizer": optimizer.state_dict(),
                             "epoch": epoch,
                             "global_step": global_step,
-                        }, args.save_dir + str(global_step) + '.pt')
+                        }, ckpt_path)
                         
-                        # Save full state including optimizer if needed
-                        if global_step % args.save_every_step == 0:
-                            accelerator.save_state(f"{args.save_dir}{global_step}")
+                        # Rotate checkpoints: keep only max_ckpts
+                        import glob
+                        ckpt_files = sorted(glob.glob(args.save_dir + '*.pt'), key=os.path.getmtime)
+                        while len(ckpt_files) > args.max_ckpts:
+                            old_ckpt = ckpt_files.pop(0)
+                            os.remove(old_ckpt)
+                            print(f"Removed old checkpoint: {old_ckpt}")
                     
                     # Synchronize after evaluation and saving
                     accelerator.wait_for_everyone()

@@ -1,0 +1,72 @@
+model_name: pretrain_vn
+
+model:
+  dim: 1024
+  depth: 24
+  heads: 16
+  ff_mult: 4
+  text_dim: 512
+  # disable convnext in text embedding
+  conv_layers: 0
+  # Vietnamese character vocab size — UPDATE after running build_vocab_vn.py
+  text_num_embeds: 176
+  mel_dim: 100
+  # ViT5-large output dim (same as Flan-T5-large)
+  t5_dim: 1024
+  clap_dim: 512
+  # enable gradient checkpointing to save memory
+  use_checkpoint: false
+  qk_norm: true
+  skip: true
+
+mel:
+  target_sample_rate: 24000
+  n_mel_channels: 100
+  hop_length: 256
+
+opt:
+  learning_rate: 2.0e-04
+  beta1: 0.9
+  beta2: 0.999
+  weight_decay: 0.01
+  adam_epsilon: 1.0e-08
+  grad_clip: 1.0
+  batch_size: 64
+  accumulation_steps: 1
+  # mask_range: [0.7, 1.0]
+  drop_spk: 0.1
+  drop_text: 0.5
+
+  lr_scheduler:
+    warmup_steps: 5000
+    decay_steps: 150000
+    end_factor: 1.0e-02
+
+data:
+  trainset:
+    dataset_dir: "/tmp/capspeech_data/vn_capspeech"
+    clap_emb_dir: "/tmp/capspeech_data/vn_capspeech/clap_embs/"
+    t5_folder_name: "t5"
+    phn_folder_name: "g2p"
+    manifest_name: "manifest"
+    json_name: "jsons"
+    dynamic_batching: true
+    text_pad_token: -1
+    audio_pad_token: 0.0
+    split: "train"
+    sr: 24000
+    norm_audio: false
+
+  valset:
+    dataset_dir: "/tmp/capspeech_data/vn_capspeech"
+    clap_emb_dir: "/tmp/capspeech_data/vn_capspeech/clap_embs/"
+    t5_folder_name: "t5"
+    phn_folder_name: "g2p"
+    manifest_name: "manifest"
+    json_name: "jsons"
+    dynamic_batching: true
+    text_pad_token: -1
+    audio_pad_token: 0.0
+    split: "val"
+    sr: 24000
+    norm_audio: false

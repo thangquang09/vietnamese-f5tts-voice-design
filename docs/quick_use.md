@@ -1,6 +1,6 @@
 # Quick Use
 
-We release our 🚀 best models for CapTTS, CapTTS-SE, AccCapTTS, EmoCapTTS, and AgentTTS. This page provides a quick-start guide for using them. 
+We release our 🚀 best models for CapTTS, AccCapTTS, EmoCapTTS, and AgentTTS. This page provides a quick-start guide for using them. 
 
 ⏳ Note that the first run may take some time as it needs to download the pretrained checkpoints.
 
@@ -8,7 +8,6 @@ We release our 🚀 best models for CapTTS, CapTTS-SE, AccCapTTS, EmoCapTTS, and
 
 - [Install](#install): how to install on linux
 - [CapTTS](#captts): how to use our CapTTS model
-- [CapTTSSE](#capttsse): how to use our CapTTS-SE model
 - [AccCapTTS](#acccaptts): how to use our AccCapTTS model
 - [EmoCapTTS](#emocaptts): how to use our EmoCapTTS model
 - [AgentTTS](#agenttts): how to use our AgentTTS model
@@ -36,44 +35,6 @@ python scripts/captts.py \
     --output_path "./demo/test_captts.wav"
 ```
 Feel free to adjust `--seed` to generate a different reproducible sample. To produce a different sample on each run, use `--random`. You can also modify `--duration` to suit your preference.
-
-## CapTTSSE
-
-⚠️ The transcripts in CapTTS-SE models support these two modes:
-
-1. Insertion: starts with a sound event tag, and `<I_start> <I_end>` represents the insertion position, e.g.
-```
-<dog> at this moment miss brandon entered with her brilliant cousin rachel the blonde and the dark it was a dazzling contrast <I_start> <I_end>
-```
-2. Background: starts with a sound event tag, and `<B_start>`, `<B_end>` represent the start and end of the background sound, e.g.
-```
-<clapping> i know said margaret bolton with a half anxious smile <B_start> the chafes against all the ways of friends <B_end> but what will thee do
-```
-
-📝 Recommended sound events:
-```
-<dog>
-<cat>
-<coughing>
-<laughing>
-<clapping>
-<footsteps>
-<door_wood_knock>
-<clock_alarm>
-<keyboard_typing>
-<can_opening>
-```
-
-Please see [CapTTS-SE_demo.ipynb](../scripts/CapTTS-SE_demo.ipynb) for an example usage.
-
-You can also run this file:
-```bash
-python scripts/captts-se.py \
-    --transcript "<dog> at this moment miss brandon entered with her brilliant cousin rachel the blonde and the dark it was a dazzling contrast <I_start> <I_end>" \
-    --caption "A young woman speaks at a moderate pace, her voice carrying a hint of monotone. Remarkably, she maintains a high pitch, giving her speech an air of focused determination." \
-    --output_path "./demo/test_capttsse.wav"
-```
-Feel free to adjust `--seed` to generate a different reproducible sample. To produce a different sample on each run, use `--random`.
 
 ## AccCapTTS
 

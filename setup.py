@@ -24,8 +24,6 @@ setup(
         'wandb',
         'ema_pytorch',
         "sentencepiece",
-        "descript-audio-codec",
-        "descript-audiotools @ git+https://github.com/descriptinc/audiotools",
         "protobuf>=4.0.0",
         "jiwer",
         "accelerate",
