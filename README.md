@@ -84,6 +84,58 @@ Features:
 - 🔊 Real-time audio playback
 - 🌐 Optional public link with `--share`
 
+### ☁️ Cloud Deployment (Modal)
+
+Deploy the TTS model as a serverless GPU API using [Modal](https://modal.com/):
+
+```bash
+# Install Modal CLI
+pip install modal
+modal setup   # one-time auth
+
+# Deploy
+modal deploy modal_app.py
+```
+
+This will give you a public HTTPS endpoint. First request triggers a cold start (~1–2 min to load models), subsequent requests are fast.
+
+#### API Usage
+
+```bash
+# cURL
+curl -X POST https://YOUR_MODAL_ENDPOINT \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Xin chào", "caption": "Giọng nữ trẻ, nói chậm rãi."}' \
+  --output output.wav
+```
+
+```python
+# Python
+import requests
+
+resp = requests.post(
+    "https://YOUR_MODAL_ENDPOINT",
+    json={
+        "text": "Hôm nay trời đẹp quá.",
+        "caption": "Giọng nam trung niên, giọng miền Nam.",
+        "speed": 1.0,
+    },
+)
+with open("output.wav", "wb") as f:
+    f.write(resp.content)
+```
+
+#### Request Body
+
+| Field | Type | Default | Description |
+|:------|:-----|:--------|:------------|
+| `text` | `string` | *required* | Vietnamese text to synthesize |
+| `caption` | `string` | *required* | Voice style instruction |
+| `speed` | `float` | `1.0` | Speed factor (>1.0 = faster) |
+| `duration` | `float\|null` | `null` | Fixed duration in seconds (null = auto) |
+
+**Response**: `audio/wav` binary
+
 ### Advanced Options
 
 ```python
@@ -150,6 +202,7 @@ tts.synthesize_batch(
 │   ├── push_to_hf.py                   # Push checkpoints to HuggingFace
 │   ├── accelerate_config.yaml          # DDP config (FSDP2 fix)
 │   └── network/crossdit.py             # CrossDiT model architecture
+├── modal_app.py                        # ☁️ Modal serverless GPU deployment
 ├── setup.py
 └── requirements.txt
 ```
@@ -214,6 +267,7 @@ Files included:
 ## 🔮 Future Work
 
 - ~~**Vietnamese Duration Predictor**~~ ✅ Done — PhoBERT-base regression, MAE=0.43s, Pearson r=0.98. Integrated into `api.py` with auto-download from HuggingFace.
+- ~~**Cloud Deployment**~~ ✅ Done — Serverless GPU API via Modal with T4 GPU, auto-scaling, and public HTTPS endpoint.
 - **More Training Epochs** — Current checkpoint was trained for ~0.5 epoch. More epochs should improve voice quality and instruction following.
 - **Gradio Spaces** — Deploy the model to HuggingFace Spaces for web-based demo.
 - **Streaming Inference** — Support chunk-by-chunk audio generation for real-time applications.
