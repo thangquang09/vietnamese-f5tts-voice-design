@@ -39,6 +39,7 @@ import torch
 import soundfile as sf
 from huggingface_hub import hf_hub_download, snapshot_download
 from transformers import T5EncoderModel, T5Tokenizer
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 from capspeech.nar import bigvgan
 from capspeech.nar.network.crossdit import CrossDiT
@@ -52,6 +53,11 @@ HF_MODEL_REPO = "thangquang09/capspeech-nar-vietnamese"
 BIGVGAN_REPO = "nvidia/bigvgan_v2_24khz_100band_256x"
 CAPTION_MODEL = "VietAI/vit5-large"
 SAMPLE_RATE = 24000
+
+# Default path for the duration predictor model (local or HF repo)
+DURATION_PREDICTOR_PATH = os.path.join(
+    os.path.dirname(__file__), "capspeech", "nar", "phobert_duration_predictor"
+)
 
 # Pre-computed CLAP text embedding for the "none" tag.
 # Vietnamese model always uses "none" (no sound effects), so we embed it
@@ -132,6 +138,7 @@ class InstructVoiceAPI:
         device: str = None,
         hf_model_repo: str = HF_MODEL_REPO,
         caption_model: str = CAPTION_MODEL,
+        duration_predictor_path: Optional[str] = DURATION_PREDICTOR_PATH,
         cache_dir: Optional[str] = None,
         seed: Optional[int] = 42,
     ):
@@ -143,18 +150,19 @@ class InstructVoiceAPI:
         if seed is not None:
             seed_everything(seed)
 
-        self._load_all(hf_model_repo, caption_model, cache_dir)
+        self._load_all(hf_model_repo, caption_model, duration_predictor_path, cache_dir)
 
     # ─────────────── Model Loading ─────────────── #
 
-    def _load_all(self, hf_model_repo: str, caption_model: str, cache_dir: Optional[str]):
+    def _load_all(self, hf_model_repo: str, caption_model: str,
+                  duration_predictor_path: Optional[str], cache_dir: Optional[str]):
         """Download and load all model components."""
         print("============================================================")
         print("  InstructVoice — Vietnamese Instruction TTS")
         print("=" * 60)
 
         # 1. Download checkpoint, config, and vocab from HuggingFace
-        print(f"\n[1/5] Downloading model from {hf_model_repo}...")
+        print(f"\n[1/6] Downloading model from {hf_model_repo}...")
         ckpt_path = hf_hub_download(
             repo_id=hf_model_repo,
             filename="checkpoint.pt",
@@ -172,7 +180,7 @@ class InstructVoiceAPI:
         )
 
         # 2. Load config and build model
-        print("[2/5] Loading CrossDiT model...")
+        print("[2/6] Loading CrossDiT model...")
         self.params = load_yaml_with_includes(config_path)
         model = CrossDiT(**self.params["model"]).to(self.device)
         checkpoint = torch.load(ckpt_path, map_location=self.device)["model"]
@@ -188,7 +196,7 @@ class InstructVoiceAPI:
         print(f"      ✓ Vocab loaded ({len(self.phn2num)} characters)")
 
         # 4. Load BigVGAN vocoder
-        print("[3/5] Loading BigVGAN vocoder...")
+        print("[3/6] Loading BigVGAN vocoder...")
         try:
             self.vocoder = bigvgan.BigVGAN.from_pretrained(
                 BIGVGAN_REPO, use_cuda_kernel=False
@@ -212,7 +220,7 @@ class InstructVoiceAPI:
         print("      ✓ BigVGAN v2 24kHz loaded")
 
         # 5. Load ViT5-large caption encoder
-        print(f"[4/5] Loading caption encoder ({caption_model})...")
+        print(f"[4/6] Loading caption encoder ({caption_model})...")
         self.caption_tokenizer = T5Tokenizer.from_pretrained(caption_model)
         self.caption_encoder = T5EncoderModel.from_pretrained(
             caption_model
@@ -222,13 +230,77 @@ class InstructVoiceAPI:
         # 5. Load pre-computed CLAP "none" embedding
         # Vietnamese model always uses tag="none" (no sound effects).
         # We embed this directly to avoid downloading OpenSound/CapSpeech-models (~15GB).
-        print("[5/5] Loading CLAP embedding...")
+        print("[5/6] Loading CLAP embedding...")
         clap_bytes = base64.b64decode(_CLAP_NONE_B64)
         clap_np = np.frombuffer(clap_bytes, dtype=np.float32)
         self.clap_none = torch.from_numpy(clap_np.copy()).unsqueeze(0).to(self.device)
         print(f"      ✓ CLAP 'none' embedding loaded (shape={self.clap_none.shape})")
 
+        # 6. Load PhoBERT duration predictor
+        print(f"[6/6] Loading duration predictor...")
+        self.duration_model = None
+        self.duration_tokenizer = None
+
+        # Try loading: (1) local path → (2) HuggingFace → (3) heuristic fallback
+        dp_load_path = None
+        if duration_predictor_path and os.path.isdir(duration_predictor_path):
+            dp_load_path = duration_predictor_path
+            print(f"      Found local: {dp_load_path}")
+        else:
+            try:
+                dp_dir = snapshot_download(
+                    repo_id=hf_model_repo,
+                    allow_patterns="duration_predictor/*",
+                    cache_dir=cache_dir,
+                )
+                dp_subdir = os.path.join(dp_dir, "duration_predictor")
+                if os.path.isdir(dp_subdir):
+                    dp_load_path = dp_subdir
+                    print(f"      Downloaded from HF: {hf_model_repo}/duration_predictor/")
+            except Exception as e:
+                print(f"      ⚠️ Could not download duration predictor from HF: {e}")
+
+        if dp_load_path:
+            try:
+                self.duration_tokenizer = AutoTokenizer.from_pretrained(dp_load_path)
+                self.duration_model = AutoModelForSequenceClassification.from_pretrained(
+                    dp_load_path, num_labels=1
+                ).to(self.device).eval()
+                print(f"      ✓ PhoBERT duration predictor loaded")
+            except Exception as e:
+                print(f"      ⚠️ Failed to load duration predictor: {e}")
+                print(f"      → Falling back to heuristic duration estimation")
+                self.duration_model = None
+                self.duration_tokenizer = None
+        else:
+            print(f"      ⚠️ Duration predictor not available")
+            print(f"      → Using heuristic duration estimation")
+
         print("\n✅ All models loaded! Ready to synthesize.\n")
+
+    # ─────────────── Duration Prediction ─────────────── #
+
+    def predict_duration(self, text: str, caption: str) -> float:
+        """Predict speech duration using PhoBERT model, with heuristic fallback."""
+        if self.duration_model is not None and self.duration_tokenizer is not None:
+            combined = f"{caption} [SEP] {text}"
+            with torch.no_grad():
+                inputs = self.duration_tokenizer(
+                    combined, return_tensors="pt",
+                    padding="max_length", truncation=True, max_length=256,
+                )
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+                output = self.duration_model(**inputs)
+                predicted = output.logits.squeeze().item()
+
+            # Clamp to reasonable range
+            predicted = max(predicted, 0.5)
+            predicted = min(predicted, 30.0)
+            return predicted
+        else:
+            dur = estimate_duration(text)
+            print(f"      ⚠️ Fallback: heuristic duration estimation → {dur:.2f}s")
+            return dur
 
     # ─────────────── Core Synthesis ─────────────── #
 
@@ -283,9 +355,9 @@ class InstructVoiceAPI:
             # Use pre-computed CLAP "none" embedding
             clap = self.clap_none
 
-            # Estimate duration from text length
+            # Predict duration using PhoBERT model (or heuristic fallback)
             if duration is None:
-                duration = estimate_duration(text)
+                duration = self.predict_duration(text, caption)
 
         # Apply speed
         if speed <= 0:

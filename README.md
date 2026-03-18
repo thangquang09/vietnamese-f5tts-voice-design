@@ -123,7 +123,8 @@ tts.synthesize_batch(
 - **CLAP embedding**: `Linear(512→512)` for sound event tags
 - **Vocoder**: BigVGAN v2 24kHz 100-band
 - **Loss**: Flow Matching (MSE)
-- **Parameters**: 614.10M trainable
+- **Parameters**: 614.10M trainable (CrossDiT)
+- **Duration predictor**: PhoBERT-base + regression head (~135M params, MAE=0.43s)
 
 ## 📁 Project Structure
 
@@ -143,6 +144,8 @@ tts.synthesize_batch(
 │   │   ├── process_vn.sh              # Single-GPU preprocessing
 │   │   └── run_preprocess_4gpu.sh     # Multi-GPU preprocessing
 │   ├── generate_vn.py                  # Vietnamese text-to-speech generation
+│   ├── train_duration_predictor_vn.py  # Duration predictor training
+│   ├── phobert_duration_predictor/     # Trained PhoBERT duration model
 │   ├── finetune.py                     # Training script
 │   ├── push_to_hf.py                   # Push checkpoints to HuggingFace
 │   ├── accelerate_config.yaml          # DDP config (FSDP2 fix)
@@ -206,10 +209,11 @@ Files included:
 - `checkpoint.pt` — Model + optimizer state dict
 - `finetune_vn.yaml` — Training configuration
 - `vocab.txt` — Vietnamese character vocabulary (176 chars)
+- `duration_predictor/` — PhoBERT-base duration predictor (config, model, tokenizer)
 
 ## 🔮 Future Work
 
-- **Vietnamese Duration Predictor** — The original CapSpeech uses a BERT-based duration predictor trained on English data (`OpenSound/CapSpeech`). We currently estimate duration from text length. A PhoBERT-based duration predictor trained on Vietnamese speech data would improve timing accuracy.
+- ~~**Vietnamese Duration Predictor**~~ ✅ Done — PhoBERT-base regression, MAE=0.43s, Pearson r=0.98. Integrated into `api.py` with auto-download from HuggingFace.
 - **More Training Epochs** — Current checkpoint was trained for ~0.5 epoch. More epochs should improve voice quality and instruction following.
 - **Gradio Spaces** — Deploy the model to HuggingFace Spaces for web-based demo.
 - **Streaming Inference** — Support chunk-by-chunk audio generation for real-time applications.

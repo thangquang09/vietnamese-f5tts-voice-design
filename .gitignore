@@ -42,3 +42,5 @@ nohup.out
 # Environment
 .env
 AGENTS.md
+capspeech/nar/phobert_duration_predictor/
+
