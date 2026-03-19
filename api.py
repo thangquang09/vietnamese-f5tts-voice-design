@@ -400,55 +400,23 @@ class InstructVoiceAPI:
         texts: list[str],
         captions: list[str],
         output_dir: str = "outputs",
-        **kwargs,
-    ) -> list[np.ndarray]:
-        """Synthesize multiple utterances (sequential, one at a time).
-
-        Args:
-            texts: List of Vietnamese texts.
-            captions: List of voice descriptions (same length as texts).
-            output_dir: Directory to save WAV files.
-            **kwargs: Additional arguments passed to synthesize().
-
-        Returns:
-            List of numpy audio arrays.
-        """
-        assert len(texts) == len(captions), \
-            f"texts ({len(texts)}) and captions ({len(captions)}) must have same length"
-
-        os.makedirs(output_dir, exist_ok=True)
-        results = []
-
-        for i, (text, caption) in enumerate(zip(texts, captions)):
-            out_path = os.path.join(output_dir, f"sample_{i:04d}.wav")
-            wav = self.synthesize(text, caption, output_path=out_path, **kwargs)
-            results.append(wav)
-
-        print(f"📁 All {len(results)} samples saved to {output_dir}/")
-        return results
-
-    def synthesize_batch_parallel(
-        self,
-        texts: list[str],
-        captions: list[str],
-        output_dir: str = "outputs",
-        batch_size: int = 8,
+        batch_size: int = 4,
         durations: list[float] | None = None,
         speed: float = 1.0,
         steps: int = 25,
         cfg: float = 2.0,
         seed: Optional[int] = None,
     ) -> list[np.ndarray]:
-        """True GPU-parallelized batch synthesis using matrix multiplication.
+        """True GPU-parallelized batch synthesis using batch_sample().
 
-        Unlike synthesize_batch() which loops over items one at a time,
-        this method processes items in parallel via batch_sample().
+        Processes items in parallel via padding + masking + matrix multiplication.
+        Sorts by duration to minimize padding waste within each sub-batch.
 
         Args:
             texts: List of Vietnamese texts.
             captions: List of voice descriptions (same length as texts).
             output_dir: Directory to save WAV files.
-            batch_size: Number of items per GPU batch.
+            batch_size: Number of items per GPU batch (default: 4).
             durations: Optional list of durations (None = auto per item).
             speed: Speed factor.
             steps: ODE solver steps.
@@ -525,6 +493,9 @@ class InstructVoiceAPI:
 
             x_list.append(torch.zeros(n_frames, 100, device=self.device))
 
+        # ── Sort by duration for efficient padding ──
+        sorted_indices = sorted(range(n), key=lambda i: duration_frames_list[i])
+
         # ── Process in batches ──
         all_wavs = [None] * n
         num_batches = math.ceil(n / batch_size)
@@ -532,17 +503,18 @@ class InstructVoiceAPI:
         for batch_idx in range(num_batches):
             si = batch_idx * batch_size
             ei = min(si + batch_size, n)
+            batch_indices = sorted_indices[si:ei]
 
             wavs = batch_sample(
                 model=self.model,
                 vocoder=self.vocoder,
-                x_list=x_list[si:ei],
+                x_list=[x_list[j] for j in batch_indices],
                 cond=None,
-                text_list=text_list[si:ei],
-                prompt_list=prompt_list[si:ei],
-                clap_list=clap_list[si:ei],
-                prompt_lens_list=prompt_lens_list[si:ei],
-                duration_frames_list=duration_frames_list[si:ei],
+                text_list=[text_list[j] for j in batch_indices],
+                prompt_list=[prompt_list[j] for j in batch_indices],
+                clap_list=[clap_list[j] for j in batch_indices],
+                prompt_lens_list=[prompt_lens_list[j] for j in batch_indices],
+                duration_frames_list=[duration_frames_list[j] for j in batch_indices],
                 steps=steps,
                 cfg=cfg,
                 sway_sampling_coef=-1.0,
@@ -550,8 +522,8 @@ class InstructVoiceAPI:
                 seed=seed,
             )
 
-            for j, wav in enumerate(wavs):
-                idx = si + j
+            for k, wav in enumerate(wavs):
+                idx = batch_indices[k]
                 all_wavs[idx] = wav
                 out_path = os.path.join(output_dir, f"sample_{idx:04d}.wav")
                 sf.write(out_path, wav, SAMPLE_RATE)
@@ -559,7 +531,7 @@ class InstructVoiceAPI:
         elapsed = time.time() - start_time
         total_audio = sum(len(w) / SAMPLE_RATE for w in all_wavs if w is not None)
         rtf = elapsed / total_audio if total_audio > 0 else 0
-        print(f"✅ Batch parallel: {n} samples, {total_audio:.1f}s audio "
+        print(f"✅ Batch: {n} samples, {total_audio:.1f}s audio "
               f"in {elapsed:.2f}s (RTF={rtf:.3f})")
         print(f"📁 Saved to {output_dir}/")
 

@@ -58,42 +58,50 @@ HOP_LENGTH = 256
 _CLAP_NONE_B64 = "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"
 
 
-# ──────────────────────── Test Data ──────────────────────── #
+# ──────────────────────── Dataset Loading ──────────────────────── #
 
-BENCHMARK_SAMPLES = [
-    {"text": "Xin chào, hôm nay bạn có khỏe không?",
-     "caption": "Giọng nữ trẻ, nói chậm rãi, giọng miền Bắc."},
-    {"text": "Thời tiết hôm nay rất đẹp, trời xanh trong.",
-     "caption": "Giọng nam trung niên, nhịp nói vừa phải."},
-    {"text": "Tôi muốn đặt một chuyến bay đi Hà Nội.",
-     "caption": "Giọng nữ trẻ, nói nhanh, giọng miền Nam."},
-    {"text": "Cảm ơn bạn rất nhiều vì đã giúp đỡ tôi.",
-     "caption": "Giọng nam, nhẹ nhàng, giọng miền Trung."},
-    {"text": "Chúng ta hãy cùng nhau xây dựng tương lai tốt đẹp hơn.",
-     "caption": "Giọng nữ trung niên, trang trọng."},
-    {"text": "Mùa xuân đến rồi, hoa nở khắp nơi.",
-     "caption": "Giọng nữ trẻ, vui vẻ, giọng miền Bắc."},
-    {"text": "Anh ấy là một người rất tốt bụng và hay giúp đỡ mọi người.",
-     "caption": "Giọng nam trẻ, tự nhiên."},
-    {"text": "Đất nước Việt Nam có rất nhiều cảnh đẹp tuyệt vời.",
-     "caption": "Giọng nam, trầm ấm, nhịp chậm."},
-    {"text": "Hôm nay là ngày sinh nhật của em gái tôi.",
-     "caption": "Giọng nữ, vui tươi, trẻ tuổi."},
-    {"text": "Tôi rất thích đọc sách và nghe nhạc vào buổi tối.",
-     "caption": "Giọng nam, nhẹ nhàng, nhịp vừa."},
-    {"text": "Việt Nam là đất nước hình chữ S nằm bên bờ Thái Bình Dương.",
-     "caption": "Giọng nữ, trang trọng, giọng miền Bắc."},
-    {"text": "Chào buổi sáng, chúc bạn một ngày mới tốt lành.",
-     "caption": "Giọng nữ trẻ, ấm áp."},
-    {"text": "Hà Nội mùa thu, lá vàng rơi đầy phố cổ.",
-     "caption": "Giọng nam trung niên, trữ tình."},
-    {"text": "Em học sinh giỏi nhất lớp đã đạt giải nhất kỳ thi quốc gia.",
-     "caption": "Giọng nam, phấn khởi, giọng miền Bắc."},
-    {"text": "Bác sĩ khuyên chúng ta nên tập thể dục mỗi ngày để khỏe mạnh.",
-     "caption": "Giọng nữ, chuyên nghiệp, nhịp vừa."},
-    {"text": "Sài Gòn về đêm thật đẹp với ánh đèn rực rỡ khắp nơi.",
-     "caption": "Giọng nam trẻ, giọng miền Nam, vui vẻ."},
-]
+DEFAULT_DATASET_CSV = "/mnt/speech/nhandt23/06_thang/vn-instructiontts/results/final_dataset/test.csv"
+
+
+def load_samples_from_csv(csv_path: str, num_samples: int, seed: int = 42) -> list:
+    """Load real samples from vn-instructiontts CSV dataset.
+    
+    Reads transcript and caption_partial columns.
+    Duration will be predicted by the model (not from WAV ground truth).
+    Randomly samples N items (with seed for reproducibility).
+    """
+    import csv
+    
+    print(f"Loading samples from {csv_path}...")
+    
+    all_rows = []
+    with open(csv_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            transcript = row.get("transcript", "")
+            caption = row.get("caption_partial", row.get("caption_full", ""))
+            
+            if not transcript or not caption:
+                continue
+                
+            all_rows.append({
+                "text": transcript,
+                "caption": caption,
+                "id": row.get("id", ""),
+                "dataset": row.get("dataset", ""),
+            })
+    
+    print(f"  Found {len(all_rows)} valid samples in CSV")
+    
+    # Randomly sample
+    rng = random.Random(seed)
+    if num_samples < len(all_rows):
+        sampled = rng.sample(all_rows, num_samples)
+    else:
+        sampled = all_rows[:num_samples]
+    
+    print(f"  Selected {len(sampled)} samples")
+    return sampled
 
 
 def text_to_chars(text: str) -> list:
@@ -149,14 +157,36 @@ def load_models(device: str):
     clap_none = torch.from_numpy(clap_np.copy()).to(device)
     print("  ✓ CLAP loaded")
 
-    return model, vocoder, phn2num, caption_tokenizer, caption_encoder, clap_none
+    # Duration predictor (PhoBERT)
+    duration_model = None
+    duration_tokenizer = None
+    try:
+        from transformers import AutoTokenizer, AutoModelForSequenceClassification
+        dp_dir = snapshot_download(
+            repo_id=HF_MODEL_REPO, allow_patterns="duration_predictor/*")
+        dp_subdir = os.path.join(dp_dir, "duration_predictor")
+        if os.path.isdir(dp_subdir):
+            duration_tokenizer = AutoTokenizer.from_pretrained(dp_subdir)
+            duration_model = AutoModelForSequenceClassification.from_pretrained(
+                dp_subdir, num_labels=1).to(device).eval()
+            print("  ✓ Duration predictor loaded")
+    except Exception as e:
+        print(f"  ⚠️ Duration predictor not available: {e}")
+        print("      → Using heuristic estimation")
+
+    return model, vocoder, phn2num, caption_tokenizer, caption_encoder, clap_none, \
+           duration_model, duration_tokenizer
 
 
 # ──────────────────────── Prepare Inputs ──────────────────────── #
 
 def prepare_inputs(items, phn2num, caption_tokenizer, caption_encoder,
-                   clap_none, device):
-    """Prepare all inputs for both single and batch inference."""
+                   clap_none, device, duration_model=None, duration_tokenizer=None):
+    """Prepare all inputs for both single and batch inference.
+    
+    Duration is predicted by PhoBERT duration predictor (if available)
+    or estimated by word-count heuristic. NOT from ground truth audio.
+    """
     prepared = []
     
     with torch.no_grad():
@@ -176,24 +206,40 @@ def prepare_inputs(items, phn2num, caption_tokenizer, caption_encoder,
             prompt = caption_encoder(input_ids=input_ids).last_hidden_state.squeeze(0)
             prompt_len = prompt.shape[0]
             
-            # Duration (heuristic)
-            words = text.strip().split()
-            duration = max(len(words) / 3.0, 1.0)
+            # Duration — use predictor, NOT ground truth
+            if duration_model is not None and duration_tokenizer is not None:
+                combined = f"{caption} [SEP] {text}"
+                inputs = duration_tokenizer(
+                    combined, return_tensors="pt",
+                    padding="max_length", truncation=True, max_length=256
+                )
+                inputs = {k: v.to(device) for k, v in inputs.items()}
+                output = duration_model(**inputs)
+                duration = output.logits.squeeze().item()
+                duration = max(duration, 0.5)
+                duration = min(duration, 30.0)
+            else:
+                # Heuristic fallback: ~3 words/sec
+                words = text.strip().split()
+                duration = max(len(words) / 3.0, 1.0)
+            
             n_frames = math.ceil(duration * SAMPLE_RATE / HOP_LENGTH)
             
             # Mel target placeholder
             x = torch.zeros(n_frames, 100, device=device)
             
             prepared.append({
-                'text_tensor': text_tensor,           # [nt]
-                'prompt': prompt,                      # [n_prompt, t5_dim]
+                'text_tensor': text_tensor,
+                'prompt': prompt,
                 'prompt_len': prompt_len,
-                'clap': clap_none.clone(),             # [clap_dim]
-                'x': x,                                # [n_frames, mel_dim]
+                'clap': clap_none.clone(),
+                'x': x,
                 'n_frames': n_frames,
                 'duration_sec': duration,
                 'text': text,
                 'caption': caption,
+                'id': item.get('id', ''),
+                'dataset': item.get('dataset', ''),
             })
     
     return prepared
@@ -240,19 +286,29 @@ def run_loop_baseline(prepared, model, vocoder, device, steps, cfg, seed):
 
 # ──────────────────────── Batch Inference ──────────────────────── #
 
-def run_batch(prepared, model, vocoder, device, batch_size, steps, cfg, seed):
-    """Run true batch inference."""
+def run_batch(prepared, model, vocoder, device, batch_size, steps, cfg, seed,
+              sort_by_duration=True, verbose=True):
+    """Run true batch inference with optional duration sorting."""
     total_time = 0.0
     total_audio_sec = 0.0
-    all_results = []
     
     n = len(prepared)
+    
+    # Sort by duration to minimize padding waste within each batch
+    indexed = list(enumerate(prepared))
+    if sort_by_duration:
+        indexed.sort(key=lambda x: x[1]['n_frames'])
+    
+    results_ordered = [None] * n
     num_batches = math.ceil(n / batch_size)
     
     for batch_idx in range(num_batches):
         start_i = batch_idx * batch_size
         end_i = min(start_i + batch_size, n)
-        batch = prepared[start_i:end_i]
+        batch_indexed = indexed[start_i:end_i]
+        
+        orig_indices = [idx for idx, _ in batch_indexed]
+        batch = [item for _, item in batch_indexed]
         
         x_list = [item['x'] for item in batch]
         text_list = [item['text_tensor'] for item in batch]
@@ -260,6 +316,18 @@ def run_batch(prepared, model, vocoder, device, batch_size, steps, cfg, seed):
         clap_list = [item['clap'] for item in batch]
         prompt_lens_list = [item['prompt_len'] for item in batch]
         duration_frames_list = [item['n_frames'] for item in batch]
+        
+        # Padding efficiency stats
+        max_frames = max(duration_frames_list)
+        total_frames = sum(duration_frames_list)
+        padded_total = max_frames * len(batch)
+        efficiency = total_frames / padded_total * 100 if padded_total > 0 else 100
+        
+        if verbose:
+            frame_range = f"{min(duration_frames_list)}–{max_frames}"
+            print(f"    Batch {batch_idx+1}/{num_batches}: "
+                  f"{len(batch)} items, frames {frame_range}, "
+                  f"pad efficiency {efficiency:.0f}%")
         
         start = time.time()
         wavs = batch_sample(
@@ -283,10 +351,12 @@ def run_batch(prepared, model, vocoder, device, batch_size, steps, cfg, seed):
         total_time += elapsed
         batch_audio = sum(len(w) / SAMPLE_RATE for w in wavs)
         total_audio_sec += batch_audio
-        all_results.extend(wavs)
+        
+        for j, wav in enumerate(wavs):
+            results_ordered[orig_indices[j]] = wav
     
     rtf = total_time / total_audio_sec if total_audio_sec > 0 else 0
-    return all_results, total_time, total_audio_sec, rtf
+    return results_ordered, total_time, total_audio_sec, rtf
 
 
 # ──────────────────────── MSE Comparison ──────────────────────── #
@@ -307,8 +377,8 @@ def compute_mse(wavs_a, wavs_b):
 
 def main():
     parser = argparse.ArgumentParser(description="Benchmark: single vs batch inference")
-    parser.add_argument("--num_samples", type=int, default=8,
-                        help="Number of test samples")
+    parser.add_argument("--num_samples", type=int, default=16,
+                        help="Number of test samples to randomly select")
     parser.add_argument("--batch_sizes", type=int, nargs="+", default=[4, 8],
                         help="Batch sizes to test")
     parser.add_argument("--steps", type=int, default=10,
@@ -321,14 +391,18 @@ def main():
     parser.add_argument("--save_audio", action="store_true",
                         help="Save generated audio for manual comparison")
     parser.add_argument("--output_dir", type=str, default="benchmark_output")
+    parser.add_argument("--dataset_csv", type=str, default=DEFAULT_DATASET_CSV,
+                        help="Path to vn-instructiontts CSV (test.csv or val.csv)")
     args = parser.parse_args()
 
     if args.device is None:
         args.device = "cuda:0" if torch.cuda.is_available() else "cpu"
     
     device = args.device
-    num_samples = min(args.num_samples, len(BENCHMARK_SAMPLES))
-    test_items = BENCHMARK_SAMPLES[:num_samples]
+    
+    # Load real samples from dataset
+    test_items = load_samples_from_csv(args.dataset_csv, args.num_samples, seed=args.seed)
+    num_samples = len(test_items)
     
     print(f"\n{'='*60}")
     print(f"  BENCHMARK: Single vs Batch Inference")
@@ -337,14 +411,41 @@ def main():
     print(f"{'='*60}\n")
 
     # Load models
-    model, vocoder, phn2num, cap_tok, cap_enc, clap_none = load_models(device)
+    model, vocoder, phn2num, cap_tok, cap_enc, clap_none, \
+        dur_model, dur_tok = load_models(device)
     
     # Prepare inputs
     print("\nPreparing inputs...")
-    prepared = prepare_inputs(test_items, phn2num, cap_tok, cap_enc, clap_none, device)
+    prepared = prepare_inputs(test_items, phn2num, cap_tok, cap_enc, clap_none, device,
+                              duration_model=dur_model, duration_tokenizer=dur_tok)
     
     for i, p in enumerate(prepared):
-        print(f"  [{i}] {p['n_frames']} frames ({p['duration_sec']:.2f}s) | {p['text'][:40]}...")
+        print(f"  [{i}] {p['n_frames']:>5} frames ({p['duration_sec']:>5.2f}s) "
+              f"[{p.get('dataset','')}] | {p['text'][:40]}...")
+    
+    # ── Duration distribution ──
+    durations = sorted([p['duration_sec'] for p in prepared])
+    print(f"\n📊 Duration Distribution (N={len(durations)})")
+    print(f"  Min: {durations[0]:.2f}s | Q1: {durations[len(durations)//4]:.2f}s "
+          f"| Median: {durations[len(durations)//2]:.2f}s "
+          f"| Q3: {durations[3*len(durations)//4]:.2f}s | Max: {durations[-1]:.2f}s")
+    print(f"  Mean: {np.mean(durations):.2f}s | Std: {np.std(durations):.2f}s "
+          f"| Total: {sum(durations):.1f}s")
+    
+    # Histogram
+    bins = [0, 2, 4, 6, 8, 10, 15, 20, 999]
+    labels = ['0-2s', '2-4s', '4-6s', '6-8s', '8-10s', '10-15s', '15-20s', '20s+']
+    hist = [0] * len(labels)
+    for d in durations:
+        for j in range(len(bins) - 1):
+            if bins[j] <= d < bins[j+1]:
+                hist[j] += 1
+                break
+    print(f"  Histogram:")
+    max_bar = max(hist) if max(hist) > 0 else 1
+    for label, count in zip(labels, hist):
+        bar = '█' * int(count / max_bar * 20) if count > 0 else ''
+        print(f"    {label:>7}: {bar} {count}")
     
     # Warmup
     print(f"\n{'─'*60}")
