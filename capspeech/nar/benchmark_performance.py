@@ -30,6 +30,13 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import soundfile as sf
+
+# Ensure repo root is on sys.path so 'capspeech' package is importable
+import sys, pathlib
+_REPO_ROOT = str(pathlib.Path(__file__).resolve().parents[2])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 from huggingface_hub import hf_hub_download, snapshot_download
 from transformers import T5EncoderModel, T5Tokenizer
 
