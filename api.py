@@ -402,7 +402,7 @@ class InstructVoiceAPI:
         output_dir: str = "outputs",
         **kwargs,
     ) -> list[np.ndarray]:
-        """Synthesize multiple utterances.
+        """Synthesize multiple utterances (sequential, one at a time).
 
         Args:
             texts: List of Vietnamese texts.
@@ -426,6 +426,144 @@ class InstructVoiceAPI:
 
         print(f"📁 All {len(results)} samples saved to {output_dir}/")
         return results
+
+    def synthesize_batch_parallel(
+        self,
+        texts: list[str],
+        captions: list[str],
+        output_dir: str = "outputs",
+        batch_size: int = 8,
+        durations: list[float] | None = None,
+        speed: float = 1.0,
+        steps: int = 25,
+        cfg: float = 2.0,
+        seed: Optional[int] = None,
+    ) -> list[np.ndarray]:
+        """True GPU-parallelized batch synthesis using matrix multiplication.
+
+        Unlike synthesize_batch() which loops over items one at a time,
+        this method processes items in parallel via batch_sample().
+
+        Args:
+            texts: List of Vietnamese texts.
+            captions: List of voice descriptions (same length as texts).
+            output_dir: Directory to save WAV files.
+            batch_size: Number of items per GPU batch.
+            durations: Optional list of durations (None = auto per item).
+            speed: Speed factor.
+            steps: ODE solver steps.
+            cfg: Classifier-free guidance scale.
+            seed: Random seed.
+
+        Returns:
+            List of numpy audio arrays.
+        """
+        from capspeech.nar.batch_inference import batch_sample
+
+        assert len(texts) == len(captions), \
+            f"texts ({len(texts)}) and captions ({len(captions)}) must have same length"
+
+        os.makedirs(output_dir, exist_ok=True)
+
+        if seed is not None:
+            seed_everything(seed)
+
+        n = len(texts)
+        if durations is None:
+            durations = [None] * n
+
+        start_time = time.time()
+
+        # ── Batch encode captions with ViT5 ──
+        unique_captions = list(set(captions))
+        with torch.no_grad():
+            batch_enc = self.caption_tokenizer(
+                unique_captions, return_tensors="pt",
+                padding=True, truncation=True
+            )
+            input_ids = batch_enc["input_ids"].to(self.device)
+            attention_mask = batch_enc["attention_mask"].to(self.device)
+            outputs = self.caption_encoder(
+                input_ids=input_ids, attention_mask=attention_mask
+            )
+            caption_embeds = outputs.last_hidden_state
+            caption_cache = {}
+            for i, cap in enumerate(unique_captions):
+                actual_len = int(attention_mask[i].sum().item())
+                caption_cache[cap] = (caption_embeds[i, :actual_len, :], actual_len)
+
+        # ── Prepare per-item tensors ──
+        x_list, text_list, prompt_list, clap_list = [], [], [], []
+        prompt_lens_list, duration_frames_list = [], []
+
+        for i in range(n):
+            text = texts[i]
+            caption = captions[i]
+            dur = durations[i]
+
+            # Text encoding
+            chars = text_to_chars(text)
+            chars = [ch for ch in chars if ch in self.phn2num]
+            text_tokens = [self.phn2num[ch] for ch in chars]
+            text_list.append(torch.LongTensor(text_tokens).to(self.device))
+
+            # Caption from cache
+            prompt_emb, prompt_len = caption_cache[caption]
+            prompt_list.append(prompt_emb)
+            prompt_lens_list.append(prompt_len)
+
+            # CLAP
+            clap_list.append(self.clap_none.squeeze(0).clone())
+
+            # Duration
+            if dur is None:
+                dur = self.predict_duration(text, caption)
+            if speed > 0:
+                dur = dur / speed
+            n_frames = math.ceil(dur * SAMPLE_RATE / 256)
+            duration_frames_list.append(n_frames)
+
+            x_list.append(torch.zeros(n_frames, 100, device=self.device))
+
+        # ── Process in batches ──
+        all_wavs = [None] * n
+        num_batches = math.ceil(n / batch_size)
+
+        for batch_idx in range(num_batches):
+            si = batch_idx * batch_size
+            ei = min(si + batch_size, n)
+
+            wavs = batch_sample(
+                model=self.model,
+                vocoder=self.vocoder,
+                x_list=x_list[si:ei],
+                cond=None,
+                text_list=text_list[si:ei],
+                prompt_list=prompt_list[si:ei],
+                clap_list=clap_list[si:ei],
+                prompt_lens_list=prompt_lens_list[si:ei],
+                duration_frames_list=duration_frames_list[si:ei],
+                steps=steps,
+                cfg=cfg,
+                sway_sampling_coef=-1.0,
+                device=str(self.device),
+                seed=seed,
+            )
+
+            for j, wav in enumerate(wavs):
+                idx = si + j
+                all_wavs[idx] = wav
+                out_path = os.path.join(output_dir, f"sample_{idx:04d}.wav")
+                sf.write(out_path, wav, SAMPLE_RATE)
+
+        elapsed = time.time() - start_time
+        total_audio = sum(len(w) / SAMPLE_RATE for w in all_wavs if w is not None)
+        rtf = elapsed / total_audio if total_audio > 0 else 0
+        print(f"✅ Batch parallel: {n} samples, {total_audio:.1f}s audio "
+              f"in {elapsed:.2f}s (RTF={rtf:.3f})")
+        print(f"📁 Saved to {output_dir}/")
+
+        return all_wavs
 
 
 # ──────────────────────── CLI Entry Point ──────────────────────── #
