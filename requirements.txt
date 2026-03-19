@@ -27,6 +27,9 @@ matplotlib
 pypinyin
 jieba
 
+# Text normalization (optional — improves handling of numbers/symbols/code-switch)
+sea-g2p
+
 # Web UI (optional — only needed for app.py)
 gradio>=4.0.0
 

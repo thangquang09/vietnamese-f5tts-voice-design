@@ -46,6 +46,13 @@ from capspeech.nar.network.crossdit import CrossDiT
 from capspeech.nar.inference import sample
 from capspeech.nar.utils import load_yaml_with_includes, make_pad_mask
 
+# Optional: sea-g2p text normalizer for handling numbers, symbols, code-switch
+try:
+    from sea_g2p import Normalizer as SeaNormalizer
+    _HAS_SEA_G2P = True
+except ImportError:
+    _HAS_SEA_G2P = False
+
 
 # ──────────────────────── Default HuggingFace Repos ──────────────────────── #
 
@@ -141,6 +148,7 @@ class InstructVoiceAPI:
         duration_predictor_path: Optional[str] = DURATION_PREDICTOR_PATH,
         cache_dir: Optional[str] = None,
         seed: Optional[int] = 42,
+        normalize: bool = True,
     ):
         if device is None:
             device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -149,6 +157,18 @@ class InstructVoiceAPI:
 
         if seed is not None:
             seed_everything(seed)
+
+        # Initialize text normalizer (sea-g2p)
+        self.normalizer = None
+        if normalize and _HAS_SEA_G2P:
+            try:
+                self.normalizer = SeaNormalizer(lang="vi")
+                print("✓ sea-g2p Normalizer loaded (Vietnamese)")
+            except Exception as e:
+                print(f"⚠️ Failed to init sea-g2p Normalizer: {e}")
+        elif normalize and not _HAS_SEA_G2P:
+            print("⚠️ sea-g2p not installed — text normalization disabled")
+            print("   Install with: pip install sea-g2p")
 
         self._load_all(hf_model_repo, caption_model, duration_predictor_path, cache_dir)
 
@@ -302,6 +322,27 @@ class InstructVoiceAPI:
             print(f"      ⚠️ Fallback: heuristic duration estimation → {dur:.2f}s")
             return dur
 
+    # ─────────────── Text Normalization ─────────────── #
+
+    def normalize_text(self, text: str) -> str:
+        """Normalize Vietnamese text (numbers, symbols, code-switch) using sea-g2p.
+
+        Examples:
+            "Giá SP500 hôm nay là 4.200,5 điểm"
+            → "giá ét pê năm trăm hôm nay là bốn nghìn hai trăm phẩy năm điểm"
+        """
+        if self.normalizer is None:
+            return text
+        try:
+            result = self.normalizer.normalize(text)
+            # sea-g2p wraps English words in <en>...</en> tags — strip them
+            import re
+            result = re.sub(r'</?en>', '', result)
+            return result
+        except Exception as e:
+            print(f"⚠️ Normalization failed, using raw text: {e}")
+            return text
+
     # ─────────────── Core Synthesis ─────────────── #
 
     def synthesize(
@@ -334,7 +375,13 @@ class InstructVoiceAPI:
         if seed is not None:
             seed_everything(seed)
 
-        print(f"📝 Text:    {text}")
+        # Normalize text (numbers, symbols, code-switch)
+        original_text = text
+        text = self.normalize_text(text)
+
+        print(f"📝 Text:    {original_text}")
+        if text != original_text:
+            print(f"📝 Normalized: {text}")
         print(f"🎙️  Caption: {caption}")
         start_time = time.time()
 
@@ -469,7 +516,8 @@ class InstructVoiceAPI:
             caption = captions[i]
             dur = durations[i]
 
-            # Text encoding
+            # Normalize + Text encoding
+            text = self.normalize_text(text)
             chars = text_to_chars(text)
             chars = [ch for ch in chars if ch in self.phn2num]
             text_tokens = [self.phn2num[ch] for ch in chars]
