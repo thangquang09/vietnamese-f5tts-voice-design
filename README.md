@@ -22,7 +22,7 @@
 
 This is a **Vietnamese adaptation** of [CapSpeech NAR](https://github.com/WangHelin1997/CapSpeech) — a non-autoregressive, flow-matching TTS model that supports **voice style control through natural language instructions**.
 
-You describe the voice you want (e.g., *"Giọng nữ trẻ, nói chậm rãi, giọng miền Bắc"*) and the model generates speech that matches your description.
+You describe the voice you want (e.g., *"Giọng nữ miền Nam cao vút, to và đầy cảm xúc."*) and the model generates speech that matches your description.
 
 ### Key Changes from Original CapSpeech
 
@@ -48,7 +48,7 @@ pip install -r requirements.txt
 ```bash
 python api.py \
     --text "Xin chào, hôm nay bạn có khoẻ không?" \
-    --caption "Giọng nữ trẻ, nói chậm rãi, giọng miền Bắc." \
+    --caption "Giọng nữ miền Nam cao vút, to và đầy cảm xúc." \
     --output output.wav
 ```
 
@@ -62,11 +62,19 @@ from api import InstructVoiceAPI
 # Initialize — downloads model from HuggingFace automatically
 tts = InstructVoiceAPI(device="cuda:0")
 
-# Generate speech
+# Single synthesis
 tts.synthesize(
     text="Thời tiết hôm nay rất đẹp.",
-    caption="Giọng nam trung niên, nhịp nói vừa phải, giọng miền Nam.",
+    caption="Giọng trầm, sinh động của một người đàn ông miền Nam.",
     output_path="output.wav",
+)
+
+# Batch synthesis (true GPU-parallelized)
+tts.synthesize_batch(
+    texts=["Câu một.", "Câu hai.", "Câu ba."],
+    captions=["Giọng nữ miền Bắc cao vút, nhanh nhẹn và đầy sinh khí dù nói rất nhẹ."] * 3,
+    output_dir="batch_output/",
+    batch_size=4,  # optimal on V100
 )
 ```
 
@@ -105,7 +113,7 @@ This will give you a public HTTPS endpoint. First request triggers a cold start 
 # cURL
 curl -X POST https://YOUR_MODAL_ENDPOINT \
   -H "Content-Type: application/json" \
-  -d '{"text": "Xin chào", "caption": "Giọng nữ trẻ, nói chậm rãi."}' \
+  -d '{"text": "Xin chào", "caption": "Giọng nữ miền Trung nhỏ nhẹ, đều đều và trầm ấm."}' \
   --output output.wav
 ```
 
@@ -117,7 +125,7 @@ resp = requests.post(
     "https://YOUR_MODAL_ENDPOINT",
     json={
         "text": "Hôm nay trời đẹp quá.",
-        "caption": "Giọng nam trung niên, giọng miền Nam.",
+        "caption": "Giọng nam miền Bắc nhanh, trầm và nhỏ nhẹ.",
         "speed": 1.0,
     },
 )
@@ -141,7 +149,7 @@ with open("output.wav", "wb") as f:
 ```python
 tts.synthesize(
     text="Xin chào thế giới!",
-    caption="Giọng nữ, trẻ tuổi, nói nhanh, giọng cao.",
+    caption="Giọng nữ miền Nam cao vút, to và đầy cảm xúc.",
     output_path="fast_speech.wav",
     duration=3.0,     # Fixed duration (seconds), None = auto
     speed=1.2,        # Speed factor (> 1.0 = faster)
@@ -149,23 +157,21 @@ tts.synthesize(
     cfg=3.0,          # Classifier-free guidance scale
     seed=123,         # Reproducibility
 )
-
-# Batch synthesis
-tts.synthesize_batch(
-    texts=["Câu một.", "Câu hai.", "Câu ba."],
-    captions=["Giọng nữ trẻ."] * 3,
-    output_dir="batch_output/",
-)
 ```
 
 ### Caption Examples
 
-| Caption | Voice Style |
-|:--------|:------------|
-| `Giọng nữ trẻ, nói chậm rãi, giọng miền Bắc.` | Young female, slow, Northern accent |
-| `Giọng nam trung niên, nhịp nói vừa phải, giọng miền Nam.` | Middle-aged male, moderate, Southern accent |
-| `Giọng nữ, trẻ tuổi, nói nhanh, giọng cao.` | Young female, fast, high pitch |
-| `Giọng nam, già, giọng trầm, nói rõ ràng.` | Old male, deep voice, clear speech |
+The model accepts natural language voice descriptions. Here are some examples:
+
+| Caption (Vietnamese) | Voice Style |
+|:---------------------|:------------|
+| `Giọng nữ miền Nam cao vút, to và đầy cảm xúc.` | Female, Southern, high pitch, loud, expressive |
+| `Giọng nam miền Bắc nhanh, trầm và nhỏ nhẹ.` | Male, Northern, fast, deep, soft |
+| `Giọng nữ miền Trung nhỏ nhẹ, đều đều và trầm ấm.` | Female, Central, soft, steady, warm |
+| `Giọng trầm, sinh động của một người đàn ông miền Nam.` | Male, Southern, deep, vivid |
+| `Giọng nữ miền Bắc cao vút, nhanh nhẹn và đầy sinh khí dù nói rất nhẹ.` | Female, Northern, high, energetic, very soft |
+
+> **Tip**: Captions can describe gender, age, accent (miền Bắc/Nam/Trung), speaking rate, pitch, loudness, and expressiveness.
 
 ## 🏗️ Model Architecture
 
@@ -178,81 +184,36 @@ tts.synthesize_batch(
 - **Parameters**: 614.10M trainable (CrossDiT)
 - **Duration predictor**: PhoBERT-base + regression head (~135M params, MAE=0.43s)
 
+### Batch Inference
+
+The model supports true GPU-parallelized batch inference via padding + attention masking:
+
+| Batch Size | RTF | Speedup | Notes |
+|:-----------|:----|:--------|:------|
+| 1 (loop) | 0.42 | 1.00x | Baseline |
+| **4** | **0.23** | **1.87x** | Recommended |
+| 8 | 0.25 | 1.71x | Higher padding overhead |
+
+> Benchmarked on V100 32GB, 64 samples from test set, 10 ODE steps.
+
 ## 📁 Project Structure
 
 ```
 ├── api.py                              # 🔥 Main inference API
 ├── app.py                              # 🌐 Gradio web UI
-├── capspeech/nar/
-│   ├── configs/
-│   │   ├── finetune_vn.yaml            # Vietnamese finetune config
-│   │   └── pretrain_vn.yaml            # Vietnamese pretrain config
-│   ├── data_preprocessing/
-│   │   ├── preprocess_vn.py            # CSV → JSON + manifest
-│   │   ├── build_vocab_vn.py           # Character-level vocab builder
-│   │   ├── phonemize_vn.py             # Character tokenization
-│   │   ├── caption_vn.py               # ViT5-large caption encoding
-│   │   ├── prepare_clap_none.py        # CLAP "none" embedding
-│   │   ├── process_vn.sh              # Single-GPU preprocessing
-│   │   └── run_preprocess_4gpu.sh     # Multi-GPU preprocessing
-│   ├── generate_vn.py                  # Vietnamese text-to-speech generation
-│   ├── train_duration_predictor_vn.py  # Duration predictor training
-│   ├── phobert_duration_predictor/     # Trained PhoBERT duration model
-│   ├── finetune.py                     # Training script
-│   ├── push_to_hf.py                   # Push checkpoints to HuggingFace
-│   ├── accelerate_config.yaml          # DDP config (FSDP2 fix)
-│   └── network/crossdit.py             # CrossDiT model architecture
 ├── modal_app.py                        # ☁️ Modal serverless GPU deployment
+├── capspeech/nar/
+│   ├── batch_inference.py              # 🚀 GPU batch inference (padding + masking)
+│   ├── batch_generate_vn.py            # Batch CLI generation
+│   ├── benchmark_performance.py        # Performance benchmark
+│   ├── generate_vn.py                  # Single-sample generation
+│   ├── network/crossdit.py             # CrossDiT model architecture
+│   └── configs/
+│       ├── finetune_vn.yaml            # Vietnamese finetune config
+│       └── pretrain_vn.yaml            # Vietnamese pretrain config
 ├── setup.py
 └── requirements.txt
 ```
-
-## 🏋️ Training
-
-### Data Preprocessing
-
-```bash
-cd capspeech/nar/data_preprocessing
-bash run_preprocess_4gpu.sh
-```
-
-The pipeline has 5 stages:
-
-| Stage | Description | GPU? |
-|:------|:-----------|:-----|
-| 0 | CSV → JSON + Manifest | ❌ |
-| 1 | Build vocabulary (176 chars) | ❌ |
-| 2 | Character tokenization | ❌ |
-| 3 | ViT5-large caption encoding | ✅ (4 GPU parallel) |
-| 4 | CLAP "none" embedding | ❌ |
-
-### Finetune from Pretrained
-
-```bash
-cd capspeech/nar
-
-CUDA_VISIBLE_DEVICES=0,1 accelerate launch \
-    --config_file accelerate_config.yaml \
-    finetune.py \
-    --config-name configs/finetune_vn.yaml \
-    --pretrained-ckpt <path_to_nar_CapTTS.pt> \
-    --epochs 5 \
-    --save-every-step 2000 \
-    --max-ckpts 3 \
-    --amp fp16
-```
-
-### Training Details
-
-| Parameter | Value |
-|:----------|:------|
-| Base model | [OpenSound/CapSpeech-models](https://huggingface.co/OpenSound/CapSpeech-models) |
-| Training data | ~1.05M Vietnamese speech samples |
-| Batch size | 32 × 2 GPUs |
-| Gradient accumulation | 2 |
-| Effective batch | 128 |
-| Mixed precision | fp16 |
-| Hardware | 2× NVIDIA A100 40GB |
 
 ## 📦 HuggingFace Model
 
@@ -266,11 +227,13 @@ Files included:
 
 ## 🔮 Future Work
 
-- ~~**Vietnamese Duration Predictor**~~ ✅ Done — PhoBERT-base regression, MAE=0.43s, Pearson r=0.98. Integrated into `api.py` with auto-download from HuggingFace.
-- ~~**Cloud Deployment**~~ ✅ Done — Serverless GPU API via Modal with T4 GPU, auto-scaling, and public HTTPS endpoint.
+- ~~**Vietnamese Duration Predictor**~~ ✅ Done — PhoBERT-base regression, MAE=0.43s, Pearson r=0.98.
+- ~~**Cloud Deployment**~~ ✅ Done — Serverless GPU API via Modal.
+- ~~**Batch Inference**~~ ✅ Done — 1.87x speedup at batch_size=4 on V100.
+- **Training Code** — Clean, well-documented training pipeline and data preprocessing scripts will be released soon.
 - **More Training Epochs** — Current checkpoint was trained for ~0.5 epoch. More epochs should improve voice quality and instruction following.
-- **Gradio Spaces** — Deploy the model to HuggingFace Spaces for web-based demo.
-- **Streaming Inference** — Support chunk-by-chunk audio generation for real-time applications.
+- **Gradio Spaces** — Deploy to HuggingFace Spaces for web-based demo.
+- **Streaming Inference** — Chunk-by-chunk audio generation for real-time applications.
 - **Voice Cloning Integration** — Combine with F5-TTS-Vietnamese for voice cloning + instruction control.
 
 ## 📝 Citation
