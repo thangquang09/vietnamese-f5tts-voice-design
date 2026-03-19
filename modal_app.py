@@ -29,8 +29,10 @@ image = (
         "jieba",
         "datasets",
         "fastapi",
+        "safetensors",
     )
     .run_commands(
+        # Pre-download all model weights into the image layer (cached across cold starts)
         "huggingface-cli download thangquang09/capspeech-nar-vietnamese",
         "huggingface-cli download nvidia/bigvgan_v2_24khz_100band_256x",
         "huggingface-cli download VietAI/vit5-large",
@@ -41,6 +43,11 @@ image = (
 app = modal.App("vietnamese-instruction-tts-api", image=image)
 
 
+# ── Volume for caching converted models (SafeTensors, etc.) ────────────── #
+
+cache_vol = modal.Volume.from_name("tts-model-cache", create_if_missing=True)
+
+
 # ── TTS API Service ──────────────────────────────────────────────────────── #
 
 
@@ -48,21 +55,29 @@ app = modal.App("vietnamese-instruction-tts-api", image=image)
     gpu="T4",
     timeout=300,
     keep_warm=0,
+    volumes={"/cache": cache_vol},
 )
 class TTSModalAPI:
     @modal.enter()
     def setup(self):
         """Load all models into VRAM once on container start."""
         import sys
+        import time
 
         sys.path.append("/root/app")
         os.chdir("/root/app")
 
+        t0 = time.time()
+
         from api import InstructVoiceAPI
 
-        print("Loading InstructVoice model...")
-        self.tts = InstructVoiceAPI(device="cuda:0")
-        print("Server ready.")
+        # fp16 + parallel loading for fastest cold start
+        self.tts = InstructVoiceAPI(
+            device="cuda:0",
+        )
+
+        elapsed = time.time() - t0
+        print(f"🚀 Server ready — total cold start: {elapsed:.1f}s")
 
     @modal.web_endpoint(method="POST")
     async def generate(self, raw_request: fastapi.Request):
@@ -75,9 +90,14 @@ class TTSModalAPI:
         text = data.get("text", "Xin chào, đây là hệ thống thử nghiệm.")
         caption = data.get("caption", "Giọng nữ trẻ, nói chậm rãi, giọng miền Bắc.")
         speed = float(data.get("speed", 1.0))
+        steps = int(data.get("steps", 25))
+        cfg = float(data.get("cfg", 2.0))
         duration = data.get("duration", None)
         if duration is not None:
             duration = float(duration)
+        seed = data.get("seed", None)
+        if seed is not None:
+            seed = int(seed)
 
         tmp_filename = f"/tmp/{uuid.uuid4()}.wav"
 
@@ -88,6 +108,9 @@ class TTSModalAPI:
                 output_path=tmp_filename,
                 duration=duration,
                 speed=speed,
+                steps=steps,
+                cfg=cfg,
+                seed=seed,
             )
 
             with open(tmp_filename, "rb") as f:
@@ -96,11 +119,17 @@ class TTSModalAPI:
             return fastapi.Response(content=audio_bytes, media_type="audio/wav")
 
         except Exception as e:
+            import traceback
             return JSONResponse(
-                content={"error": str(e)},
+                content={"error": str(e), "traceback": traceback.format_exc()},
                 status_code=500,
             )
 
         finally:
             if os.path.exists(tmp_filename):
                 os.remove(tmp_filename)
+
+    @modal.web_endpoint(method="GET")
+    async def health(self):
+        """Health check endpoint."""
+        return {"status": "ok", "model": "capspeech-nar-vietnamese", "dtype": "fp16"}

@@ -1,0 +1,92 @@
+[
+  {
+    "id": "caikinhdi_vn_audio_552.08_562.08",
+    "dataset": "vivoice",
+    "task": "general",
+    "transcript": "thế nên sau lời cầu hôn của ông chủ tiệm bánh dù từ chối làm giấy tờ vì sợ bị lộ thân phận nhưng katy cu càng trở nên bất cẩn và liều lĩnh hơn so với trước",
+    "caption_full": "Giọng nữ trưởng thành miền Nam, nói to, nhịp chậm, giọng rất cao và lối diễn đạt rất biểu cảm.",
+    "caption_partial": "Giọng nữ miền Nam cao vút, to và đầy cảm xúc.",
+    "attributes": {
+      "gender": "nữ",
+      "age": "người trưởng thành",
+      "accent": "giọng miền Nam",
+      "speaking_rate": "chậm",
+      "pitch": "rất cao",
+      "loudness": "to",
+      "expressiveness": "rất biểu cảm"
+    },
+    "audio_path": "/mnt/speech/speechData/rawData/Public_Data/Vivoice/wavs/caikinhdi_vn_audio_552.08_562.08.wav"
+  },
+  {
+    "id": "cosu_audio_216.06_221.64",
+    "dataset": "vivoice",
+    "task": "general",
+    "transcript": "với cái đầu tiên nó sẽ dẫn ta tới sảnh chính của tòa nhà, nơi được thiết kế với phong cách rất đáng yêu",
+    "caption_full": "Giọng nam trưởng thành miền Bắc nói nhanh, giọng hơi trầm, âm lượng nhỏ nhẹ và có biểu cảm.",
+    "caption_partial": "Giọng nam miền Bắc nhanh, trầm và nhỏ nhẹ.",
+    "attributes": {
+      "gender": "nam",
+      "age": "người trưởng thành",
+      "accent": "giọng miền Bắc",
+      "speaking_rate": "nhanh",
+      "pitch": "hơi trầm",
+      "loudness": "nhỏ",
+      "expressiveness": "sinh động"
+    },
+    "audio_path": "/mnt/speech/speechData/rawData/Public_Data/Vivoice/wavs/cosu_audio_216.06_221.64.wav"
+  },
+  {
+    "id": "BoringPPL_audio_324.16_334.9",
+    "dataset": "vivoice",
+    "task": "general",
+    "transcript": "trong mệnh đề white mình bị yêu cầu nhập lại password, mình nhập input là la la, máy tính quay ngược về xét điều kiện của vòng lặp, và vì la la vẫn khác với polling people máy tính chạy lại mệnh đề",
+    "caption_full": "Giọng nữ người lớn miền Trung, nói ở tốc độ vừa phải với âm vực trung bình, âm lượng rất nhỏ và biểu cảm ở mức vừa phải.",
+    "caption_partial": "Giọng nữ miền Trung nhỏ nhẹ, đều đều và trầm ấm.",
+    "attributes": {
+      "gender": "nữ",
+      "age": "người trưởng thành",
+      "accent": "giọng miền Trung",
+      "speaking_rate": "vừa phải",
+      "pitch": "trung bình",
+      "loudness": "rất nhỏ",
+      "expressiveness": "biểu cảm vừa phải"
+    },
+    "audio_path": "/mnt/speech/speechData/rawData/Public_Data/Vivoice/wavs/BoringPPL_audio_324.16_334.9.wav"
+  },
+  {
+    "id": "eaf95865-4fe5-462f-82ca-8513d021d8e2",
+    "dataset": "dolly",
+    "task": "general",
+    "transcript": "Nhưng chỗ này ít nhất cũng cách mặt đất một hai nghìn mét, sao có thể xuất hiện ánh sáng mặt trời được chứ?",
+    "caption_full": "Giọng nam trưởng thành miền Nam, nói hơi chậm với giọng trầm, âm lượng vừa và sự biểu cảm rất sinh động.",
+    "caption_partial": "Giọng trầm, sinh động của một người đàn ông miền Nam.",
+    "attributes": {
+      "gender": "nam",
+      "age": "người trưởng thành",
+      "accent": "giọng miền Nam",
+      "speaking_rate": "hơi chậm",
+      "pitch": "trầm",
+      "loudness": "vừa",
+      "expressiveness": "rất biểu cảm"
+    },
+    "audio_path": "/mnt/speech/speechData/rawData/Public_Data/dolly/wavs/eaf95865-4fe5-462f-82ca-8513d021d8e2.wav"
+  },
+  {
+    "id": "016b45fd-bbb3-4585-a6b6-d8e7591b6a10",
+    "dataset": "dolly",
+    "task": "general",
+    "transcript": "Nhu cầu cải thiện chất lượng dịch vụ y tế đang ngày càng rõ ràng.",
+    "caption_full": "Giọng nữ trưởng thành miền Bắc, nói hơi nhanh với âm vực cao, âm lượng rất nhỏ và lối diễn đạt sinh động.",
+    "caption_partial": "Giọng nữ miền Bắc cao vút, nhanh nhẹn và đầy sinh khí dù nói rất nhẹ.",
+    "attributes": {
+      "gender": "nữ",
+      "age": "người trưởng thành",
+      "accent": "giọng miền Bắc",
+      "speaking_rate": "hơi nhanh",
+      "pitch": "cao",
+      "loudness": "rất nhỏ",
+      "expressiveness": "sinh động"
+    },
+    "audio_path": "/mnt/speech/speechData/rawData/Public_Data/dolly/wavs/016b45fd-bbb3-4585-a6b6-d8e7591b6a10.wav"
+  }
+]

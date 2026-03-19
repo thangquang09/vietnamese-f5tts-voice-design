@@ -9,6 +9,7 @@ Launch:
 import argparse
 import tempfile
 import os
+import json
 
 import gradio as gr
 from api import InstructVoiceAPI
@@ -20,7 +21,6 @@ tts: InstructVoiceAPI = None  # type: ignore
 def load_model(device: str):
     """Load the TTS model once at startup."""
     global tts
-    print(f"\n🚀 Loading InstructVoice model on {device}...")
     tts = InstructVoiceAPI(device=device)
 
 
@@ -61,35 +61,48 @@ def synthesize(
     return out_path
 
 
-# ──────────────────────── Example data ──────────────────────── #
 
-EXAMPLES = [
-    [
-        "Xin chào, hôm nay bạn có khoẻ không?",
-        "Giọng nữ trẻ, nói chậm rãi, giọng miền Bắc.",
-        0, 1.0, 25, 2.0, 42,
-    ],
-    [
-        "Thời tiết hôm nay rất đẹp, chúng ta ra ngoài chơi đi.",
-        "Giọng nam trung niên, nhịp nói vừa phải, giọng miền Nam.",
-        0, 1.0, 25, 2.0, 42,
-    ],
-    [
-        "Tin tức mới nhất cho thấy nền kinh tế đang phục hồi mạnh mẽ.",
-        "Giọng nam, già, giọng trầm, nói rõ ràng.",
-        0, 1.0, 32, 2.0, 42,
-    ],
-    [
-        "Xin mời quý vị hành khách chuẩn bị lên tàu.",
-        "Giọng nữ, trẻ tuổi, nói nhanh, giọng cao.",
-        0, 1.2, 25, 2.0, 42,
-    ],
-    [
-        "Chúc mừng năm mới! Kính chúc quý vị một năm an khang thịnh vượng.",
-        "Giọng nữ trẻ, nói chậm, giọng miền Trung, ấm áp.",
-        0, 0.9, 25, 2.5, 42,
-    ],
-]
+# ──────────────────────── Demo Samples (Ground Truth) ──────────────────────── #
+
+DEMO_SAMPLES_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "demo_samples.json",
+)
+
+def _load_demo_samples():
+    """Load curated demo samples from JSON."""
+    if not os.path.exists(DEMO_SAMPLES_PATH):
+        print(f"⚠️  Demo samples not found at {DEMO_SAMPLES_PATH}")
+        return []
+    with open(DEMO_SAMPLES_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+DEMO_SAMPLES = _load_demo_samples()
+
+
+def _attr_badges_html(attrs: dict) -> str:
+    """Render voice attributes as colored badge HTML."""
+    badge_colors = {
+        "gender":         ("#f48fb1", "👤"),
+        "age":            ("#ce93d8", "🎂"),
+        "accent":         ("#90caf9", "🗺️"),
+        "speaking_rate":  ("#ffcc80", "🏃"),
+        "pitch":          ("#a5d6a7", "🎵"),
+        "loudness":       ("#ef9a9a", "🔊"),
+        "expressiveness": ("#80deea", "🎭"),
+    }
+    html = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">'
+    for key, (color, icon) in badge_colors.items():
+        val = attrs.get(key)
+        if val:
+            html += (
+                f'<span style="background:{color}18; color:{color}; '
+                f'border:1px solid {color}44; border-radius:12px; '
+                f'padding:2px 10px; font-size:0.82em; white-space:nowrap;">'
+                f'{icon} {val}</span>'
+            )
+    html += '</div>'
+    return html
 
 
 # ──────────────────────── Build Gradio UI ──────────────────────── #
@@ -106,6 +119,70 @@ def build_ui():
         text-align: center;
         color: #666;
         margin-bottom: 1.5em;
+    }
+    .demo-card {
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        background: #1a1a2e;
+        transition: box-shadow 0.2s;
+    }
+    .demo-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        border-color: #555;
+    }
+    .demo-card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .demo-card-header .badge {
+        background: #1976d2;
+        color: white;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: 600;
+    }
+    .demo-card-header .sample-id {
+        color: #888;
+        font-size: 0.78em;
+        font-family: monospace;
+    }
+    .caption-box {
+        background: #0d2137;
+        border-left: 3px solid #42a5f5;
+        padding: 8px 12px;
+        border-radius: 0 8px 8px 0;
+        margin: 8px 0;
+        font-style: italic;
+        color: #90caf9;
+    }
+    .caption-partial-box {
+        background: #2a1a00;
+        border-left: 3px solid #ffa726;
+        padding: 6px 12px;
+        border-radius: 0 8px 8px 0;
+        margin: 4px 0 8px 0;
+        font-size: 0.9em;
+        color: #ffcc80;
+    }
+    .transcript-box {
+        background: #111;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin: 8px 0;
+        font-size: 0.95em;
+        line-height: 1.5;
+        color: #ccc;
+    }
+    .section-divider {
+        border: none;
+        border-top: 2px solid #333;
+        margin: 2em 0;
     }
     """
 
@@ -179,31 +256,6 @@ def build_ui():
                     type="filepath",
                 )
 
-                gr.Markdown("""
-                ### 💡 Gợi ý mô tả giọng nói
-
-                | Mô tả | Phong cách |
-                |:------|:-----------|
-                | `Giọng nữ trẻ, nói chậm rãi, giọng miền Bắc.` | Nữ trẻ, chậm, Bắc |
-                | `Giọng nam trung niên, nhịp nói vừa phải, giọng miền Nam.` | Nam trung niên, vừa, Nam |
-                | `Giọng nữ, trẻ tuổi, nói nhanh, giọng cao.` | Nữ trẻ, nhanh, cao |
-                | `Giọng nam, già, giọng trầm, nói rõ ràng.` | Nam già, trầm, rõ |
-                """)
-
-        # ─── Examples ───
-        gr.Examples(
-            examples=EXAMPLES,
-            inputs=[
-                text_input, caption_input,
-                duration_slider, speed_slider,
-                steps_slider, cfg_slider, seed_input,
-            ],
-            outputs=audio_output,
-            fn=synthesize,
-            cache_examples=False,
-            label="📋 Ví dụ",
-        )
-
         # ─── Event handler ───
         generate_btn.click(
             fn=synthesize,
@@ -214,6 +266,58 @@ def build_ui():
             ],
             outputs=audio_output,
         )
+
+        # ─── Demo Samples from Dataset (Ground Truth) ───
+        if DEMO_SAMPLES:
+            gr.HTML('<hr class="section-divider">')
+            gr.HTML("""
+                <h2 style="text-align:center; margin-bottom:0.3em;">
+                    🎧 Demo Samples từ Dataset
+                </h2>
+                <p style="text-align:center; color:#666; font-size:0.9em; margin-bottom:1.5em;">
+                    Các mẫu ground-truth được chọn lọc từ tập test — thể hiện sự đa dạng
+                    về giới tính, vùng miền, tốc độ nói, cao độ và mức biểu cảm.
+                    <br>Bấm <strong>"Dùng mẫu này"</strong> để điền text & caption vào form tổng hợp phía trên.
+                </p>
+            """)
+
+            for idx, sample in enumerate(DEMO_SAMPLES):
+                attrs = sample["attributes"]
+                badges_html = _attr_badges_html(attrs)
+
+                with gr.Row():
+                    with gr.Column(scale=4):
+                        gr.HTML(f"""
+                        <div class="demo-card">
+                            <div class="demo-card-header">
+                                <span class="badge">{sample['dataset'].upper()}</span>
+                                <span class="badge" style="background:#43a047;">#{idx+1}</span>
+                                <span class="sample-id">{sample['id']}</span>
+                            </div>
+                            <div class="caption-box">
+                                📝 <strong>Caption (full):</strong> {sample['caption_full']}
+                            </div>
+                            <div class="caption-partial-box">
+                                ✂️ <strong>Caption (partial):</strong> {sample['caption_partial']}
+                            </div>
+                            <div class="transcript-box">
+                                💬 <strong>Transcript:</strong> {sample['transcript']}
+                            </div>
+                            {badges_html}
+                        </div>
+                        """)
+
+                    with gr.Column(scale=1, min_width=120):
+                        use_btn = gr.Button(
+                            "✨ Dùng mẫu này",
+                            variant="secondary",
+                            size="sm",
+                        )
+                        use_btn.click(
+                            fn=lambda t=sample["transcript"], c=sample["caption_full"]: (t, c),
+                            inputs=[],
+                            outputs=[text_input, caption_input],
+                        )
 
         gr.Markdown("""
         ---

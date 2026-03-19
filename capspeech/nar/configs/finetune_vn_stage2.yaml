@@ -1,0 +1,68 @@
+model_name: finetune_captts_vn_stage2
+
+model:
+  dim: 1024
+  depth: 24
+  heads: 16
+  ff_mult: 4
+  text_dim: 512
+  conv_layers: 0
+  text_num_embeds: 176
+  mel_dim: 100
+  t5_dim: 1024
+  clap_dim: 512
+  use_checkpoint: false
+  qk_norm: true
+  skip: true
+
+mel:
+  target_sample_rate: 24000
+  n_mel_channels: 100
+  hop_length: 256
+
+opt:
+  # Lower LR to prevent catastrophic forgetting
+  learning_rate: 5.0e-06
+  beta1: 0.9
+  beta2: 0.999
+  weight_decay: 0.01
+  adam_epsilon: 1.0e-08
+  grad_clip: 1.0
+  batch_size: 32
+  accumulation_steps: 2
+  drop_spk: 0.1
+  drop_text: 0.5
+
+  lr_scheduler:
+    warmup_steps: 500
+    decay_steps: 50000
+    end_factor: 1.0e-02
+
+data:
+  trainset:
+    dataset_dir: "/data1/speech/nhandt23/06_thang/capspeech_stage2"
+    clap_emb_dir: "/data1/speech/nhandt23/06_thang/capspeech_stage2/clap_embs/"
+    t5_folder_name: "t5"
+    phn_folder_name: "g2p"
+    manifest_name: "manifest"
+    json_name: "jsons"
+    dynamic_batching: true
+    text_pad_token: -1
+    audio_pad_token: 0.0
+    split: "train"
+    sr: 24000
+    norm_audio: false
+
+  valset:
+    dataset_dir: "/data1/speech/nhandt23/06_thang/capspeech_stage2"
+    clap_emb_dir: "/data1/speech/nhandt23/06_thang/capspeech_stage2/clap_embs/"
+    t5_folder_name: "t5"
+    phn_folder_name: "g2p"
+    manifest_name: "manifest"
+    json_name: "jsons"
+    dynamic_batching: true
+    text_pad_token: -1
+    audio_pad_token: 0.0
+    split: "val"
+    sr: 24000
+    norm_audio: false

@@ -611,5 +611,7 @@ class TimestepEmbedding(nn.Module):
 
     def forward(self, timestep: float['b']):
         time_hidden = self.time_embed(timestep)
+        # SinusPositionEmbedding outputs float32; cast to match MLP weight dtype (fp16/bf16)
+        time_hidden = time_hidden.to(self.time_mlp[0].weight.dtype)
         time = self.time_mlp(time_hidden)  # b d
         return time

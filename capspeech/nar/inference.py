@@ -48,7 +48,7 @@ def sample(model, vocoder,
 
     with torch.inference_mode():
         wav_gen = vocoder(out)
-    wav_gen_float = wav_gen.squeeze().cpu().numpy() # wav_gen is FloatTensor with shape [1, T_time]
+    wav_gen_float = wav_gen.squeeze().float().cpu().numpy() # wav_gen is FloatTensor with shape [1, T_time]
     return wav_gen_float
 
 
