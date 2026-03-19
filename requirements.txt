@@ -1,15 +1,35 @@
+# Core
 torch==2.6.0
 torchaudio==2.6.0
 torchvision==0.21.0
 transformers==4.46.1
 huggingface_hub
+safetensors
+
+# Audio
 soundfile
+librosa
+scipy
+
+# Model
 einops
 torchdiffeq
 x_transformers
 sentencepiece
 protobuf>=4.0.0
-librosa
+
+# Utils
 numpy
+pandas
+tqdm
+pyyaml
+matplotlib
 pypinyin
+jieba
+
+# Web UI (optional — only needed for app.py)
 gradio>=4.0.0
+
+# Cloud deploy (optional — only needed for modal_app.py)
+# modal
+# fastapi
