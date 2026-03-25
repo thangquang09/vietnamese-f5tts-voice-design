@@ -9,6 +9,7 @@ import typing as tp
 import numpy as np
 import torchaudio
 import sys
+from collections import defaultdict
 from torch.utils.data import Dataset
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -53,7 +54,7 @@ class CapSpeech(Dataset):
         manifest_fn = os.path.join(self.dataset_dir, self.manifest_name, self.split+".txt")
 
         meta = read_json(os.path.join(self.dataset_dir, self.json_name, self.split + ".json"))
-        self.meta = {item["segment_id"]: item["audio_path"] for item in meta}
+        self.meta = {item["segment_id"]: item for item in meta}
 
         with open(manifest_fn, "r") as rf:
             data = [l.strip().split("\t") for l in rf.readlines()]
@@ -62,6 +63,17 @@ class CapSpeech(Dataset):
 
         self.data = [item[0] for item in data]
         self.tag_list = [item[1] for item in data]
+        self.index_metadata = [self.meta[item[0]] for item in data if item[0] in self.meta]
+        self.pool_to_indices = defaultdict(list)
+        self.subpool_to_indices = defaultdict(list)
+        for idx, seg_id in enumerate(self.data):
+            entry = self.meta.get(seg_id)
+            if entry is None:
+                continue
+            for pool_name in entry.get("pool_memberships", []):
+                self.pool_to_indices[pool_name].append(idx)
+            for subpool_name in entry.get("subpool_memberships", []):
+                self.subpool_to_indices[subpool_name].append(idx)
 
         logging.info(f"number of data points for {self.split} split: {len(self.data)}")
 
@@ -99,7 +111,7 @@ class CapSpeech(Dataset):
         try:
             seg_id = self.data[index]
             pf = os.path.join(self.dataset_dir, self.phn_folder_name, seg_id+".txt")
-            audio_path = self.meta[seg_id]
+            audio_path = self.meta[seg_id]["audio_path"]
             cf = os.path.join(self.dataset_dir, self.t5_folder_name, seg_id+".npz")
             tagf = os.path.join(self.clap_emb_dir, self.tag_list[index]+'.npz')
             with open(pf, "r") as p:

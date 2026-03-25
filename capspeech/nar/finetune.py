@@ -22,6 +22,7 @@ from dataset.capspeech import CapSpeech
 from utils import load_checkpoint, make_pad_mask
 from utils import get_lr_scheduler, load_yaml_with_includes
 from inference import eval_model
+from dataset.pool_sampler import build_stage2_v3_sampler
 
 
 def parse_args():
@@ -41,6 +42,9 @@ def parse_args():
     parser.add_argument('--save-every-step', type=int, default=1000)
     parser.add_argument('--max-ckpts', type=int, default=3, help='Max checkpoints to keep (oldest deleted)')
     parser.add_argument('--resume-from', type=str, default=None, help='Path to checkpoint to resume training')
+    parser.add_argument('--train-sampler', type=str, default='shuffle', choices=['shuffle', 'stage2_v3'])
+    parser.add_argument('--sampler-recipe', type=str, default=None,
+                        help='Path to stage2-v3 recipe YAML when using --train-sampler stage2_v3')
 
     # Log and random seed
     parser.add_argument('--random-seed', type=int, default=2025)
@@ -102,8 +106,24 @@ if __name__ == '__main__':
 
     # dataset
     train_set = CapSpeech(**params['data']['trainset'])
+    train_sampler = None
+    train_shuffle = True
+    if args.train_sampler == 'stage2_v3':
+        if not args.sampler_recipe:
+            raise ValueError("--sampler-recipe is required when --train-sampler stage2_v3")
+        train_sampler = build_stage2_v3_sampler(
+            dataset=train_set,
+            recipe_path=args.sampler_recipe,
+            split='train',
+            seed=args.random_seed,
+            num_replicas=accelerator.num_processes,
+            rank=accelerator.process_index,
+        )
+        train_shuffle = False
+
     train_loader = DataLoader(train_set, num_workers=args.num_workers,
-                              batch_size=params['opt']['batch_size'], shuffle=True,
+                              batch_size=params['opt']['batch_size'], shuffle=train_shuffle,
+                              sampler=train_sampler,
                               collate_fn=train_set.collate)
 
     val_set = CapSpeech(**params['data']['valset'])
@@ -188,6 +208,8 @@ if __name__ == '__main__':
     # We'll evaluate after the first epoch or at the first eval step
 
     for epoch in range(start_epoch, args.epochs):
+        if train_sampler is not None and hasattr(train_sampler, "set_epoch"):
+            train_sampler.set_epoch(epoch)
         model.train()
         
         # Use accelerator's progress bar for correct handling in distributed setup

@@ -1,0 +1,75 @@
+version: stage2_v3
+
+filters:
+  min_duration: 1.0
+  max_duration: 18.0
+
+paths:
+  data_dir: /tmp/capspeech_data/vn_capspeech_stage2_v3
+
+selection:
+  replay:
+    train:
+      per_source:
+        vivoice: 50000
+        dolly: 50000
+    val:
+      per_source:
+        vivoice: 2500
+        dolly: 2500
+  accent_vimd_full:
+    train: all
+    val: all
+  accent_lsvsc_bal:
+    train:
+      strategy: split_local_min
+      regions:
+        - giọng miền Bắc
+        - giọng miền Trung
+        - giọng miền Nam
+    val:
+      strategy: cap
+      per_region: 171
+      regions:
+        - giọng miền Bắc
+        - giọng miền Trung
+        - giọng miền Nam
+  age_main:
+    allowed_datasets:
+      - lsvsc
+      - vimd
+      - visec
+      - vnemos
+    train:
+      adult_cap: 3500
+    val:
+      adult_cap: 350
+  age_child_aux:
+    train: 750
+    val: 100
+  emotion_gt:
+    allowed_datasets:
+      - visec
+      - vnemos
+    train: all
+    val: all
+
+sampling:
+  virtual_epoch_samples: 100000
+  top_level:
+    replay_general: 0.50
+    accent_vimd_full: 0.20
+    accent_lsvsc_bal: 0.10
+    age_main: 0.15
+    emotion_gt: 0.05
+  age:
+    teen: 0.30
+    adult: 0.30
+    senior: 0.30
+    child_aux: 0.10
+  emotion:
+    trung lập: 0.24
+    tức giận: 0.24
+    vui vẻ: 0.24
+    buồn bã: 0.24
+    sợ hãi: 0.04
