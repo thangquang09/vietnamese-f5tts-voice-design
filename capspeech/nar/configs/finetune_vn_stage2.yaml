@@ -21,8 +21,8 @@ mel:
   hop_length: 256
 
 opt:
-  # Lower LR to prevent catastrophic forgetting
-  learning_rate: 5.0e-06
+  # Higher than old Stage 2 (5e-6) but lower than Stage 1 (2e-5)
+  learning_rate: 1.0e-05
   beta1: 0.9
   beta2: 0.999
   weight_decay: 0.01
@@ -30,7 +30,7 @@ opt:
   grad_clip: 1.0
   batch_size: 32
   accumulation_steps: 2
-  drop_spk: 0.1
+  drop_spk: 0.15
   drop_text: 0.5
 
   lr_scheduler:

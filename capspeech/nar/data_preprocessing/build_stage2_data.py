@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """
-Build Stage 2 mixed dataset for CapSpeech NAR Vietnamese.
+Build Stage 2 mixed dataset for CapSpeech NAR Vietnamese (v2).
 
-Combines:
-- Emotion task (upsampled ×10)
-- Accent task (×1)
-- General → Senior (×2)
-- General → Youth (×5)
-- General → Children (×10)
-- General → Adult rehearsal (~50K random, ×1)
+Strategy:
+- Use `kw_age` and `kw_emotion` columns directly (no regex on caption)
+- Priority: emotion > age (if sample has kw_emotion, it goes to emotion bucket)
+- Ignore task column — group purely by kw_age / kw_emotion
+- Adult rehearsal = random sample from "người trưởng thành" with no emotion
+
+Groups:
+  1. emotion     (kw_emotion non-empty, any age)        ×15
+  2. children    (kw_age = "trẻ em", no emotion)         ×2
+  3. teen        (kw_age = "thanh thiếu niên", no emo)   ×3
+  4. senior      (kw_age = "cao tuổi", no emotion)       ×8
+  5. adult       (kw_age = "người trưởng thành", no emo) ×1, capped
 
 Output: jsons/{train,val}.json + manifest/{train,val}.txt in save_dir
 """
@@ -18,31 +23,30 @@ import csv
 import json
 import random
 import argparse
-import re
 import soundfile as sf
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
-# Age group patterns in caption_full
-AGE_PATTERNS = {
-    "senior": re.compile(r'cao tuổi|già|lớn tuổi', re.IGNORECASE),
-    "youth": re.compile(r'thanh thiếu niên|trẻ tuổi', re.IGNORECASE),
-    "children": re.compile(r'trẻ em|bé trai|bé gái|em bé|cậu bé|bé nhỏ', re.IGNORECASE),
+# Age keywords in kw_age column
+AGE_MAP = {
+    "trẻ em": "children",
+    "thanh thiếu niên": "teen",
+    "cao tuổi": "senior",
+    "người trưởng thành": "adult",
 }
 
 UPSAMPLE_FACTORS = {
-    "emotion": 10,
-    "accent": 1,
-    "senior": 2,
-    "youth": 5,
-    "children": 100,
+    "emotion": 15,
+    "children": 2,
+    "teen": 3,
+    "senior": 8,
     "adult_rehearsal": 1,
 }
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Build Stage 2 mixed dataset")
+    parser = argparse.ArgumentParser(description="Build Stage 2 mixed dataset (v2)")
     parser.add_argument('--csv_dir', type=str,
                         default='/data1/speech/nhandt23/06_thang/vn-instructiontts/results/final_dataset',
                         help="Directory containing train.csv, val.csv")
@@ -50,9 +54,9 @@ def parse_args():
                         default='/data1/speech/nhandt23/06_thang/capspeech_stage2',
                         help="Output directory (NFS)")
     parser.add_argument('--caption_column', type=str, default='caption_full')
-    parser.add_argument('--adult_rehearsal_train', type=int, default=50000,
+    parser.add_argument('--adult_rehearsal_train', type=int, default=30000,
                         help="Number of adult rehearsal samples for train split")
-    parser.add_argument('--adult_rehearsal_val', type=int, default=5000,
+    parser.add_argument('--adult_rehearsal_val', type=int, default=3000,
                         help="Number of adult rehearsal samples for val split")
     parser.add_argument('--max_duration', type=float, default=18.0)
     parser.add_argument('--min_duration', type=float, default=1.0)
@@ -71,12 +75,18 @@ def get_audio_duration(audio_path):
         return None
 
 
-def classify_age_group(caption):
-    """Classify age group from caption text."""
-    for group, pattern in AGE_PATTERNS.items():
-        if pattern.search(caption):
-            return group
-    return "adult"
+def classify_row(row):
+    """Classify a row into a bucket using kw_emotion and kw_age columns.
+    
+    Priority: emotion > age group.
+    Returns bucket name: 'emotion', 'children', 'teen', 'senior', or 'adult'.
+    """
+    emotion = row.get('kw_emotion', '').strip()
+    if emotion:
+        return 'emotion'
+    
+    age_kw = row.get('kw_age', '').strip()
+    return AGE_MAP.get(age_kw, 'adult')
 
 
 def process_row(row, caption_column):
@@ -102,8 +112,6 @@ def process_row(row, caption_column):
         "caption": caption,
         "duration": round(duration, 5),
         "source": row.get('dataset', 'unknown'),
-        "task": row.get('task', 'general'),
-        "age_group": classify_age_group(caption),
     }
 
 
@@ -112,36 +120,38 @@ def build_stage2_split(csv_path, args, split):
     with open(csv_path, 'r', encoding='utf-8') as f:
         rows = list(csv.DictReader(f))
 
-    # Classify rows
+    # Classify rows by emotion > age priority
     buckets = {
         "emotion": [],
-        "accent": [],
-        "senior": [],
-        "youth": [],
         "children": [],
+        "teen": [],
+        "senior": [],
         "adult": [],
     }
 
     for row in rows:
-        task = row.get('task', 'general')
-        if task == 'emotion':
-            buckets['emotion'].append(row)
-        elif task == 'accent':
-            buckets['accent'].append(row)
-        elif task == 'general':
-            caption = row.get(args.caption_column, '')
-            age = classify_age_group(caption)
-            if age in buckets:
-                buckets[age].append(row)
-            else:
-                buckets['adult'].append(row)
+        bucket = classify_row(row)
+        if bucket in buckets:
+            buckets[bucket].append(row)
+        else:
+            buckets['adult'].append(row)
 
-    # Print stats
+    # Print raw stats
     print(f"\n{'='*60}")
     print(f"Split: {split}")
     print(f"{'='*60}")
     for k, v in buckets.items():
         print(f"  {k:20s}: {len(v):>8d} raw samples")
+
+    # Print emotion breakdown
+    emo_breakdown = {}
+    for row in buckets['emotion']:
+        emo = row.get('kw_emotion', '').strip()
+        emo_breakdown[emo] = emo_breakdown.get(emo, 0) + 1
+    if emo_breakdown:
+        print(f"\n  Emotion breakdown:")
+        for k, v in sorted(emo_breakdown.items(), key=lambda x: -x[1]):
+            print(f"    {k:20s}: {v:>6d}")
 
     if args.dry_run:
         # Estimate upsampled counts
@@ -153,9 +163,10 @@ def build_stage2_split(csv_path, args, split):
             else:
                 factor_key = k
                 count = len(v)
-            upsampled = count * UPSAMPLE_FACTORS.get(factor_key, 1)
+            factor = UPSAMPLE_FACTORS.get(factor_key, 1)
+            upsampled = count * factor
             total += upsampled
-            print(f"  {k:20s}: {upsampled:>8d} after upsample (×{UPSAMPLE_FACTORS.get(factor_key, 1)})")
+            print(f"  {k:20s}: {upsampled:>8d} after upsample (×{factor})")
         print(f"  {'TOTAL':20s}: {total:>8d}")
         return []
 
@@ -230,22 +241,16 @@ def save_split(entries, save_dir, split):
     os.makedirs(json_dir, exist_ok=True)
     os.makedirs(manifest_dir, exist_ok=True)
 
-    # Remove internal fields before saving
-    clean_entries = []
-    for e in entries:
-        clean = {k: v for k, v in e.items() if k not in ('task', 'age_group')}
-        clean_entries.append(clean)
-
     json_path = os.path.join(json_dir, f"{split}.json")
     with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(clean_entries, f, ensure_ascii=False, indent=2)
+        json.dump(entries, f, ensure_ascii=False, indent=2)
 
     manifest_path = os.path.join(manifest_dir, f"{split}.txt")
     with open(manifest_path, 'w', encoding='utf-8') as f:
-        for entry in clean_entries:
+        for entry in entries:
             f.write(f"{entry['segment_id']}\tnone\n")
 
-    print(f"  → JSON: {json_path} ({len(clean_entries)} entries)")
+    print(f"  → JSON: {json_path} ({len(entries)} entries)")
     print(f"  → Manifest: {manifest_path}")
 
 

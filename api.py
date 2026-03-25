@@ -56,7 +56,7 @@ except ImportError:
 
 # ──────────────────────── Default HuggingFace Repos ──────────────────────── #
 
-HF_MODEL_REPO = "thangquang09/capspeech-nar-vietnamese"
+HF_MODEL_REPO = "thangquang09/capspeech-nar-vietnamese-stage2"
 BIGVGAN_REPO = "nvidia/bigvgan_v2_24khz_100band_256x"
 CAPTION_MODEL = "VietAI/vit5-large"
 SAMPLE_RATE = 24000
@@ -188,11 +188,23 @@ class InstructVoiceAPI:
             filename="checkpoint.pt",
             cache_dir=cache_dir,
         )
-        config_path = hf_hub_download(
-            repo_id=hf_model_repo,
-            filename="finetune_vn.yaml",
-            cache_dir=cache_dir,
-        )
+        # Try stage2 config first, then fallback to stage1
+        config_path = None
+        for config_name in ["finetune_vn_stage2.yaml", "finetune_vn.yaml"]:
+            try:
+                config_path = hf_hub_download(
+                    repo_id=hf_model_repo,
+                    filename=config_name,
+                    cache_dir=cache_dir,
+                )
+                break
+            except Exception:
+                continue
+        if config_path is None:
+            raise FileNotFoundError(
+                f"No config file found in {hf_model_repo}. "
+                "Expected finetune_vn_stage2.yaml or finetune_vn.yaml"
+            )
         vocab_path = hf_hub_download(
             repo_id=hf_model_repo,
             filename="vocab.txt",

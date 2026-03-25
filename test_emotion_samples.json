@@ -1,0 +1,62 @@
+[
+  {
+    "id": "spk25_happy_01136",
+    "emotion": "vui vẻ",
+    "transcript": "Tăng giá",
+    "caption": "Giọng nam trẻ tuổi miền Bắc, nói rất chậm rãi với giọng rất cao, âm lượng to, đều đều nhưng vẫn toát lên sự vui tươi."
+  },
+  {
+    "id": "spk6_happy_01877",
+    "emotion": "vui vẻ",
+    "transcript": "thường thì ăn một mình cái này thì nó",
+    "caption": "Giọng nữ người lớn miền Trung, nói ở tốc độ vừa phải với giọng rất cao, âm lượng vừa, cảm xúc hạnh phúc nhưng lối diễn đạt đơn điệu."
+  },
+  {
+    "id": "sadness_nctb-00.45.00.997-00.45.06.642-seg10",
+    "emotion": "buồn bã",
+    "transcript": "Đo quá à, tôi vỗ miếng mà nó không có chịu nín, không biết khóc tới chừng nào đây.",
+    "caption": "Giọng nữ trưởng thành miền Nam, nói với nhịp vừa phải, giọng hơi trầm, âm lượng rất to, mang cảm xúc buồn rầu và đầy biểu cảm."
+  },
+  {
+    "id": "spk0_sad_01211",
+    "emotion": "buồn bã",
+    "transcript": "Anh Niu sẽ quay lại tìm em.",
+    "caption": "Giọng nữ trưởng thành miền Nam, nói nhịp vừa phải với giọng rất cao, âm lượng nhỏ, hơi đều và mang cảm xúc buồn bã."
+  },
+  {
+    "id": "spk103_angry_00976",
+    "emotion": "tức giận",
+    "transcript": "Anh thấy là văn hóa ứng xử của em đang có vấn đề đấy",
+    "caption": "Giọng nam trưởng thành miền Bắc, nói dồn dập với giọng rất cao, âm lượng to, cảm xúc giận dữ và lối diễn đạt đều đều."
+  },
+  {
+    "id": "spk26_angry_02415",
+    "emotion": "tức giận",
+    "transcript": "Như vậy khác gì rồi anh em chúng nó vào chân tường",
+    "caption": "Giọng nam trưởng thành miền Bắc, nói liến thoắng với âm lượng rất to, giọng cao, đều đều và mang sắc thái tức giận."
+  },
+  {
+    "id": "nmhb_1",
+    "emotion": "sợ hãi",
+    "transcript": "Lệnh dữ vậy trời Bây giờ nhắc lại Nè coi nè Nổi hết trơn da gà luôn nè Thấy không Sao",
+    "caption": "Giọng nữ người lớn miền Nam, nói rất to với cao độ rất cao, tốc độ rất thong thả, lối diễn đạt rất sinh động và mang sắc thái hoảng sợ."
+  },
+  {
+    "id": "spk0_neutral_02801",
+    "emotion": "trung lập",
+    "transcript": "Tôi giúp anh tiền giốn để mua bông băng thuốc đỏ",
+    "caption": "Giọng nữ trưởng thành miền Nam, nói rất nhanh với âm thanh rất nhỏ, giọng rất cao, lối diễn đạt sinh động nhưng giữ cảm xúc trung lập."
+  },
+  {
+    "id": "spk0_neutral_01275",
+    "emotion": "trung lập",
+    "transcript": "Chở thêm 2 chuyến nữa, anh đi một mình nha.",
+    "caption": "Giọng nữ trưởng thành miền Nam, nói nhịp gấp với giọng rất cao, âm lượng rất nhỏ nhẹ, đều đều và cảm xúc bình thường."
+  },
+  {
+    "id": "spk25_happy_01140",
+    "emotion": "vui vẻ",
+    "transcript": "Mình thấy bạn vui quá, hôm nay có chuyện gì vui vậy?",
+    "caption": "Giọng nam trẻ tuổi miền Bắc, nói vừa phải với giọng cao, âm lượng to, mang cảm xúc vui tươi và phấn khởi."
+  }
+]

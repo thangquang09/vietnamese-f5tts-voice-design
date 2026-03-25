@@ -270,24 +270,10 @@ if __name__ == '__main__':
                     # Reset loss accumulator
                     losses = 0.0
                 
-                # Evaluation logic
-                if global_step % args.eval_every_step == 0:
-                    # Set model to eval mode
-                    model.eval()
-                    
-                    # Synchronize before evaluation
-                    accelerator.wait_for_everyone()
-                    
+                # Save checkpoint logic (independent of eval)
+                if global_step % args.save_every_step == 0:
                     if accelerator.is_main_process:
-                        # Get unwrapped model for evaluation
                         unwrapped_model = accelerator.unwrap_model(model)
-                        
-                        # Run evaluation without specifying device
-                        eval_model(unwrapped_model, vocoder, mel, val_loader, params,
-                                   steps=25, cfg=2.0,
-                                   sway_sampling_coef=-1.0, 
-                                   # Remove explicit device setting
-                                   epoch=global_step, save_path=args.log_dir + 'output/', val_num=1)
                         
                         # Save model checkpoint
                         ckpt_path = args.save_dir + str(global_step) + '.pt'
@@ -305,8 +291,25 @@ if __name__ == '__main__':
                             old_ckpt = ckpt_files.pop(0)
                             os.remove(old_ckpt)
                             print(f"Removed old checkpoint: {old_ckpt}")
+
+                # Evaluation logic (separate from save)
+                if global_step % args.eval_every_step == 0:
+                    # Set model to eval mode
+                    model.eval()
                     
-                    # Synchronize after evaluation and saving
+                    # Synchronize before evaluation
+                    accelerator.wait_for_everyone()
+                    
+                    if accelerator.is_main_process:
+                        unwrapped_model = accelerator.unwrap_model(model)
+                        
+                        # Run evaluation
+                        eval_model(unwrapped_model, vocoder, mel, val_loader, params,
+                                   steps=25, cfg=2.0,
+                                   sway_sampling_coef=-1.0, 
+                                   epoch=global_step, save_path=args.log_dir + 'output/', val_num=1)
+                    
+                    # Synchronize after evaluation
                     accelerator.wait_for_everyone()
                     
                     # Set model back to train mode
