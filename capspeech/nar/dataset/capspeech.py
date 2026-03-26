@@ -49,6 +49,7 @@ class CapSpeech(Dataset):
         self.split = split
         self.sr = sr
         self.norm_audio = norm_audio
+        self.max_load_retries = 16
 
         assert self.split in ['train', 'train_small', 'val', 'test']
         manifest_fn = os.path.join(self.dataset_dir, self.manifest_name, self.split+".txt")
@@ -88,6 +89,17 @@ class CapSpeech(Dataset):
 
     def __len__(self):
         return len(self.data)
+
+    def _empty_item(self):
+        return {
+            "x": None,
+            "x_len": None,
+            "y": None,
+            "y_len": None,
+            "c": None,
+            "c_len": None,
+            "tag": None
+        }
 
     def _load_audio(self, audio_path):
         try:
@@ -130,41 +142,30 @@ class CapSpeech(Dataset):
             return None, None, None, None
 
     def __getitem__(self, index):
-        x, y, c, tag = self._load_phn_enc(index)
-        if x is None:
-            return {
-                "x": None,
-                "x_len": None,
-                "y": None,
-                "y_len": None,
-                "c": None,
-                "c_len": None,
-                "tag": None
-            }
-        x_len, y_len, c_len = len(x), len(y[0]), len(c)
-        y_len = y_len / self.sr
+        for attempt in range(self.max_load_retries):
+            current_index = (index + attempt) % len(self.data)
+            x, y, c, tag = self._load_phn_enc(current_index)
+            if x is None:
+                continue
 
-        if y_len * self.sr / 256 <= x_len:
+            x_len, y_len, c_len = len(x), len(y[0]), len(c)
+            y_len = y_len / self.sr
+
+            if y_len * self.sr / 256 <= x_len:
+                continue
+
+            x = torch.LongTensor(x)
             return {
-                "x": None,
-                "x_len": None,
-                "y": None,
-                "y_len": None,
-                "c": None,
-                "c_len": None,
-                "tag": None
+                "x": x,
+                "x_len": x_len,
+                "y": y,
+                "y_len": y_len,
+                "c": c,
+                "c_len": c_len,
+                "tag": tag
             }
-            
-        x = torch.LongTensor(x)
-        return {
-            "x": x,
-            "x_len": x_len,
-            "y": y,
-            "y_len": y_len,
-            "c": c,
-            "c_len": c_len,
-            "tag": tag
-        }
+
+        return self._empty_item()
 
     def collate(self, batch):
         out = {key:[] for key in batch[0]}
@@ -175,6 +176,12 @@ class CapSpeech(Dataset):
                 continue
             for key, val in item.items():
                 out[key].append(val)
+
+        if len(out["x"]) == 0:
+            raise RuntimeError(
+                "CapSpeech collate received an empty batch after filtering invalid samples. "
+                "This usually means too many samples failed audio/g2p/t5 loading or duration validation."
+            )
 
         res = {}
         res["x"] = torch.nn.utils.rnn.pad_sequence(out["x"], batch_first=True, padding_value=self.text_pad_token)

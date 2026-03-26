@@ -75,8 +75,14 @@ def set_device(args):
         args.device = 'cpu'
 
 
-def prepare_batch(batch, mel, latent_sr):
-    x, x_lens, y, y_lens, c, c_lens, tag = batch["x"], batch["x_lens"], batch["y"], batch["y_lens"], batch["c"], batch["c_lens"], batch["tag"]
+def prepare_batch(batch, mel, latent_sr, device):
+    x = batch["x"].to(device, non_blocking=True)
+    x_lens = batch["x_lens"].to(device, non_blocking=True)
+    y = batch["y"].to(device, non_blocking=True)
+    y_lens = batch["y_lens"].to(device, non_blocking=True)
+    c = batch["c"].to(device, non_blocking=True)
+    c_lens = batch["c_lens"].to(device, non_blocking=True)
+    tag = batch["tag"].to(device, non_blocking=True)
 
     # add len for clap embedding
     x_lens = x_lens + 1
@@ -183,9 +189,14 @@ if __name__ == '__main__':
     
     lr_scheduler = get_lr_scheduler(optimizer, 'customized', **params['opt']['lr_scheduler'])
     
-    # Prepare with accelerator
-    (model, optimizer, lr_scheduler, 
-     train_loader, val_loader) = accelerator.prepare(model, optimizer, lr_scheduler, train_loader, val_loader)
+    # Stage2-v3 already shards data by rank inside the custom sampler.
+    # Preparing train_loader with Accelerate would shard it a second time.
+    if args.train_sampler == 'stage2_v3':
+        model, optimizer, lr_scheduler = accelerator.prepare(model, optimizer, lr_scheduler)
+        val_loader = accelerator.prepare(val_loader)
+    else:
+        (model, optimizer, lr_scheduler,
+         train_loader, val_loader) = accelerator.prepare(model, optimizer, lr_scheduler, train_loader, val_loader)
     
     # Move mel and vocos to the same device as model AFTER preparation
     mel = mel.to(accelerator.device)
@@ -200,6 +211,13 @@ if __name__ == '__main__':
         setup_directories(args, params)
         trainable_params = sum(param.nelement() for param in model.parameters() if param.requires_grad)
         print("Number of trainable parameters: %.2fM" % (trainable_params / 1e6))
+        if train_sampler is not None:
+            print(
+                "Stage2-v3 sampler active: "
+                f"virtual_epoch_samples={train_sampler.virtual_epoch_samples}, "
+                f"per_rank_samples={len(train_sampler)}, "
+                f"steps_per_epoch={len(train_loader)}"
+            )
     
     # Add synchronization point
     accelerator.wait_for_everyone()
@@ -217,7 +235,9 @@ if __name__ == '__main__':
         
         for step, batch in enumerate(progress_bar):
             with accelerator.accumulate(model):
-                (text, text_lens, audio_clips, audio_lens, prompt, prompt_lens, clap) = prepare_batch(batch, mel, latent_sr)
+                (text, text_lens, audio_clips, audio_lens, prompt, prompt_lens, clap) = prepare_batch(
+                    batch, mel, latent_sr, accelerator.device
+                )
                 # prepare flow mathing
                 x1 = audio_clips
                 x0 = torch.randn_like(x1)
@@ -232,8 +252,8 @@ if __name__ == '__main__':
                 cond = None
 
                 # prepare batch cfg
-                drop_prompt = (torch.rand(x1.shape[0]) < params['opt']['drop_spk'])
-                drop_text = drop_prompt & (torch.rand(x1.shape[0]) < params['opt']['drop_text'])
+                drop_prompt = (torch.rand(x1.shape[0], device=x1.device) < params['opt']['drop_spk'])
+                drop_text = drop_prompt & (torch.rand(x1.shape[0], device=x1.device) < params['opt']['drop_text'])
 
                 prompt[drop_prompt] = 0.0
                 prompt_lens[drop_prompt] = 1

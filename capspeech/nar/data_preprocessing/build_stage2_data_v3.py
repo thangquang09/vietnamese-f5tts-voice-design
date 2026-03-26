@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import random
+import re
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -38,6 +39,19 @@ def normalize_text(value) -> str:
     if pd.isna(value):
         return ""
     return str(value).strip()
+
+
+def sanitize_segment_component(value: str) -> str:
+    value = str(value).strip()
+    value = re.sub(r"[\\/\\s]+", "_", value)
+    value = re.sub(r"[^0-9A-Za-z._-]+", "_", value)
+    return value or "unknown"
+
+
+def build_segment_id(row: pd.Series) -> str:
+    dataset_norm = sanitize_segment_component(row["dataset_norm"])
+    raw_segment_id = sanitize_segment_component(row["id"])
+    return f"{dataset_norm}__{raw_segment_id}"
 
 
 def detect_mount_remap(sample_path: str) -> Optional[tuple[str, str]]:
@@ -92,14 +106,21 @@ def sample_rows(df: pd.DataFrame, count: int, rng: random.Random) -> pd.DataFram
 
 
 def add_membership(unique_rows: Dict[str, dict], row: pd.Series, pool: str, subpool: str, label: str, caption_column: str) -> None:
-    segment_id = row["id"]
+    text = normalize_text(row.get("transcript", ""))
+    caption = normalize_text(row.get(caption_column, ""))
+    audio_path = normalize_text(row.get("audio_path", ""))
+    if not text or not caption or not audio_path:
+        return
+
+    segment_id = build_segment_id(row)
     entry = unique_rows.get(segment_id)
     if entry is None:
         entry = {
             "segment_id": segment_id,
-            "audio_path": row["audio_path"],
-            "text": row["transcript"],
-            "caption": row[caption_column],
+            "raw_segment_id": str(row["id"]),
+            "audio_path": audio_path,
+            "text": text,
+            "caption": caption,
             "source": row["dataset_norm"],
             "pool": pool,
             "subpool": subpool,
@@ -110,6 +131,18 @@ def add_membership(unique_rows: Dict[str, dict], row: pd.Series, pool: str, subp
             "label_memberships": [],
         }
         unique_rows[segment_id] = entry
+    else:
+        mismatches = []
+        if entry["audio_path"] != audio_path:
+            mismatches.append("audio_path")
+        if entry["text"] != text:
+            mismatches.append("text")
+        if entry["caption"] != caption:
+            mismatches.append("caption")
+        if mismatches:
+            raise ValueError(
+                f"Segment collision for {segment_id} with conflicting fields: {', '.join(mismatches)}"
+            )
 
     if pool not in entry["pool_memberships"]:
         entry["pool_memberships"].append(pool)
@@ -233,6 +266,7 @@ def main():
         all_summary["splits"][split] = {
             "selected_unique_rows": len(selected),
             "pool_stats": stats,
+            "namespaced_segment_id": True,
         }
         selected_cache[split] = selected
         (pool_stats_dir / f"{split}_pool_stats.json").write_text(

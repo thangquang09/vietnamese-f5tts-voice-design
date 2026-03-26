@@ -76,7 +76,7 @@ CUDA_VISIBLE_DEVICES="$GPU_LIST" accelerate launch \
   --sampler-recipe "$SCRIPT_DIR/configs/stage2_v3_recipe.yaml" \
   --epochs 5 \
   --num-workers 8 \
-  --eval-every-step 500 \
+  --eval-every-step 1000000 \
   --save-every-step 500 \
   --max-ckpts 3 \
   --log-dir /tmp/capspeech_train_v3/logs \
