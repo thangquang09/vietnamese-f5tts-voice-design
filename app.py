@@ -18,10 +18,10 @@ from api import InstructVoiceAPI
 tts: InstructVoiceAPI = None  # type: ignore
 
 
-def load_model(device: str):
+def load_model(hf_model_repo: str, device: str):
     """Load the TTS model once at startup."""
     global tts
-    tts = InstructVoiceAPI(device=device)
+    tts = InstructVoiceAPI(device=device, hf_model_repo=hf_model_repo)
 
 
 def synthesize(
@@ -335,6 +335,8 @@ def build_ui():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="InstructVoice Vietnamese TTS — Gradio UI")
+    parser.add_argument("--hf_model_repo", type=str, default="thangquang09/capspeech-nar-vietnamese-stage2-v3",
+                        help="HuggingFace model repository")
     parser.add_argument("--device", type=str, default=None,
                         help="Device: cuda:0, cpu, etc. (default: auto)")
     parser.add_argument("--port", type=int, default=7860,
@@ -344,7 +346,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     device = args.device or ("cuda:0" if __import__("torch").cuda.is_available() else "cpu")
-    load_model(device)
+    load_model(args.hf_model_repo, device)
 
     demo = build_ui()
     demo.launch(

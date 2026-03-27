@@ -190,7 +190,7 @@ class InstructVoiceAPI:
         )
         # Try stage2 config first, then fallback to stage1
         config_path = None
-        for config_name in ["finetune_vn_stage2.yaml", "finetune_vn.yaml"]:
+        for config_name in ["finetune_vn_stage2_v3.yaml", "finetune_vn_stage2.yaml", "finetune_vn.yaml"]:
             try:
                 config_path = hf_hub_download(
                     repo_id=hf_model_repo,
@@ -203,7 +203,7 @@ class InstructVoiceAPI:
         if config_path is None:
             raise FileNotFoundError(
                 f"No config file found in {hf_model_repo}. "
-                "Expected finetune_vn_stage2.yaml or finetune_vn.yaml"
+                "Expected finetune_vn_stage2_v3.yaml, finetune_vn_stage2.yaml, or finetune_vn.yaml"
             )
         vocab_path = hf_hub_download(
             repo_id=hf_model_repo,
