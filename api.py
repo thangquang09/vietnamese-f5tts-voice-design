@@ -56,7 +56,7 @@ except ImportError:
 
 # ──────────────────────── Default HuggingFace Repos ──────────────────────── #
 
-HF_MODEL_REPO = "thangquang09/capspeech-nar-vietnamese-stage2"
+HF_MODEL_REPO = "thangquang09/capspeech-nar-vietnamese-stage2-v3"
 BIGVGAN_REPO = "nvidia/bigvgan_v2_24khz_100band_256x"
 CAPTION_MODEL = "VietAI/vit5-large"
 SAMPLE_RATE = 24000
